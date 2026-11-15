@@ -1,0 +1,40 @@
+{
+  "name": "halo-health-autonomy-loop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "HALO - Health Autonomy Loop for Orbit. NASA Space Apps 2026 entry.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:single": "tsc --noEmit && SINGLE=1 vite build --outDir dist-single",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "e2e": "node e2e/run.mjs",
+    "a11y": "node e2e/a11y.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "framer-motion": "^14.14.0",
+    "lucide-react": "^1.73.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.10.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.6.2",
+    "axe-core": "^4.14.0",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^7.0.2",
+    "vite": "^6.4.6",
+    "vite-plugin-singlefile": "^2.3.4",
+    "vitest": "^3.2.7"
+  }
+}
