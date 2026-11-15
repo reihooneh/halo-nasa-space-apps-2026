@@ -45,7 +45,7 @@
 - NIH NHLBI: Low Blood Pressure. https://www.nhlbi.nih.gov/node/4880
 - Mayo Clinic: Heart rate, what is normal? (cites AHA). https://www.mayoclinic.org/healthy-lifestyle/fitness/expert-answers/heart-rate
 - CDC: Definitions of Signs, Symptoms, and Conditions of Ill Travelers (fever). https://www.cdc.gov/port-health/php/definitions-symptoms-reportable-illness
-- ADA Standards of Care in Diabetes 2025 (glucose levels, Diabetes Care 48 Suppl 1). https://pmc.ncbi.nlm.nih.gov/articles/11635037
+- ADA Standards of Care in Diabetes 2025 (glucose levels, Diabetes Care 48 Suppl 1). https://pmc.ncbi.nlm.nih.gov/articles/PMC11635037/
 - Definitions of hypo/hyperglycaemia and time in range (Table 1). https://pmc.ncbi.nlm.nih.gov/articles/PMC6531520/table/Tab1
 - American Diabetes Association: severe hypoglycaemia guide (15-15 rule). https://professional.diabetes.org/sites/dpro/files/2025-10/xeris-severe-hypoglycemia-what-to-know-with-a-low-patient-7-14-25-002.pdf
 - AASM & Sleep Research Society 2015: Recommended amount of sleep for a healthy adult. https://pmc.ncbi.nlm.nih.gov/articles/PMC4434546/
@@ -54,10 +54,10 @@
 - Basner, Mollicone & Dinges 2011, Acta Astronautica: brief 3-min PVT (PVT-B). https://pmc.ncbi.nlm.nih.gov/articles/PMC3197786/
 - Jones et al. 2022, SLEEP: Reaction Self Test in 24 astronauts on 6-month ISS missions. https://pmc.ncbi.nlm.nih.gov/articles/PMC8919197
 - NASA Spinoff 2013: 3-minute PVT renamed the Reaction Self-Test on the ISS. https://spinoff.nasa.gov/Spinoff2013/hm_1.html
-- Arsintescu et al. 2017, Behavior Research Methods: PVT lapses >500 ms; PVT-B uses 355 ms. https://dx.doi.org/10.3758/s13428-016-0763-8
+- Arsintescu et al., NASA Ames 2017: PVT evaluation for touchscreen devices (lapse = response over 500 ms). https://ntrs.nasa.gov/api/citations/20170009855/downloads/20170009855.pdf
 - UPenn Unit for Experimental Psychiatry: Astronaut behavioral health (Cognition battery, NASA Standard Measures). https://www.med.upenn.edu/uep/cognition.html
 - Cosoli et al. 2018, JMIR: validating wearable heart-rate monitors (ANSI accuracy ±10% or ±5 bpm). https://pmc.ncbi.nlm.nih.gov/articles/PMC6048383
-- Bland and Altman 1986, The Lancet: agreement between two methods of clinical measurement. https://doi.org/10.1016/S0140-6736(86)90837-8
+- Bland and Altman 1986, The Lancet: agreement between two methods of clinical measurement. https://pubmed.ncbi.nlm.nih.gov/2868172/
 
 ## Software libraries (open source)
 - React 18.3.1 and React DOM (MIT). https://react.dev
