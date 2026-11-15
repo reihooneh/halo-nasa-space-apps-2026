@@ -55,7 +55,7 @@ export function TriageView() {
             ))}
           </ol>
           <div className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3" data-rules-checked>
-            <div className="mb-2 flex items-center justify-between"><div className="label">Every rule HALO checked just now</div><span className="num text-[11px] text-ink-mute">{t.hits.length} of 9 triggered</span></div>
+            <div className="mb-2 flex items-center justify-between"><div className="label">All rules checked now</div><span className="num text-[11px] text-ink-mute">{t.hits.length} of 9 triggered</span></div>
             <ul className="grid gap-1.5 sm:grid-cols-2">
               {([['R1', 'Space weather', h.speActive ? 'particle event' : h.watchActive ? 'watch' : 'quiet'], ['R2', 'Fever', `${h.latest.temp ?? '—'} °C`], ['R3', 'Blood pressure', `${h.latest.sbp ?? '—'}/${h.latest.dbp ?? '—'}`], ['R4', 'Glucose', `${h.latest.glucose ?? '—'} mg/dL`], ['R5', 'Mood', `${h.latest.mood ?? '—'}/5`], ['R6', 'Sleep', `${h.latest.sleep ?? '—'} h`], ['R7', 'Reaction time', `${h.latest.pvt ?? '—'} ms`], ['R8', 'Exercise', `${h.latest.exercise ?? '—'} min`], ['R9', 'Heart rate', `${h.latest.hr ?? '—'} bpm`]] as const).map(([id, name, val]) => {
                 const hit = t.hits.find((x) => x.id.startsWith(id + '-') || x.id.startsWith(id + 'b-'))
@@ -98,7 +98,7 @@ function Medkit() {
   const h = useHalo()
   const adj = (id: string, d: number) => h.set('medkit', h.medkit.map((m) => (m.id === id ? { ...m, qty: Math.max(0, m.qty + d) } : m)))
   return (
-    <Panel title="Onboard medkit" kicker="Triage only recommends what you have" tour="medkit" right={<Illustrative text="Simulated inventory" />}>
+    <Panel title="Onboard medkit" kicker="Recommends only what is on board" tour="medkit" right={<Illustrative text="Simulated inventory" />}>
       <ul className="space-y-1.5">
         {h.medkit.map((m) => {
           const low = m.qty <= 0 ? 'empty' : m.scarceAt > 0 && m.qty <= m.scarceAt ? 'low' : null

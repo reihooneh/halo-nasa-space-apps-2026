@@ -15,6 +15,8 @@
 
 **Live demo:** https://reihooneh.github.io/halo-nasa-space-apps-2026/ (installable, works offline after the first visit)
 
+**7-slide pitch deck:** [docs/HALO-Orbital-Vitals-pitch-deck.pdf](docs/HALO-Orbital-Vitals-pitch-deck.pdf)
+
 ---
 
 ## Run it
@@ -83,7 +85,8 @@ npm run a11y         # axe-core WCAG 2.1 A/AA audit of every view and mode
 | 3D body & habitat | 3D hologram body map with seven selectable systems and a beating heart at the logged rate; 3D habitat cutaway where crew move into the water-walled shelter as the checklist is ticked | Body Map, Radiation |
 | Sensor bench | `node e2e/sensors.mjs`: Chrome's fake camera plays pulsing-skin videos at 10 known rates (48–120 bpm) and HALO must read each within 2 bpm; a mock Bluetooth GATT strap runs 11 packet and failure scenarios | e2e/ |
 | Live NASA data | Official DONKI API (`ccmc.gsfc.nasa.gov/DONKI-API`) with `api.nasa.gov` as a backup endpoint: parallel requests, 8 s timeout, retries with backoff, record validation, de-duplication and a last-good cache; falls back to bundled real events offline (`src/engine/donkiClient.ts`, 8 unit tests) | Radiation & Space Weather |
-| Layout audit | `node e2e/overlap.mjs` checks every page at 1440, 1024, 768 and 390 px on mission days 57, 90 and 157 for cut-off text, overlapping text and content spilling out of panels: 0 issues | e2e/ |
+| Layout audit | `node e2e/overlap.mjs` checks every page at 1440, 1024, 768 and 390 px on mission days 57, 90 and 157 for cut-off text, overlapping text, short labels breaking over two lines, content spilling out of panels, and pop-ups covering what the pointer is on: 0 issues | e2e/ |
+| Hover read-outs | Chart values appear in a strip above each chart instead of a floating box over the data | All charts |
 | PWA | Installable, offline after first visit | Production build |
 | Extras | First-visit welcome card, Mission Debrief, pre-queued ground traffic, global Earth Mode, one-handed glove quick bar, mobile slim header | Everywhere |
 

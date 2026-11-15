@@ -82,13 +82,13 @@ export function ClinicalView() {
 
       <SubHead n="4" title="Is HALO clinical?" text="An honest answer, so judges and crews know exactly what to trust." />
       <div className="grid gap-5 lg:grid-cols-3">
-        <Panel title="Clinical-grade today" kicker="Built on published standards">
+        <Panel title="Clinical-grade today" kicker="Published standards">
           <ul className="space-y-1.5 text-sm text-ink-soft">{['Absolute thresholds from AHA, NHLBI, CDC, ADA and AASM', 'PHQ-2: a validated depression screen', 'PVT-B scoring as flown by NASA (355 ms lapse)', 'Bland–Altman method for sensor agreement', 'NASA-STD-3001 radiation limits'].map((x) => <li key={x} className="flex gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-ok" aria-hidden />{x}</li>)}</ul>
         </Panel>
-        <Panel title="Not clinical" kicker="Stated everywhere in the app">
+        <Panel title="Not clinical" kicker="Stated in the app">
           <ul className="space-y-1.5 text-sm text-ink-soft">{['Crew data is simulated; the crew is fictional', 'Not cleared as a medical device; no diagnosis or drug dosing', 'Triage steps are demo protocols, not flight-surgeon approved', 'Drift parameters (z-score, persistence) are HALO design choices', 'Camera pulse is demo-grade until validated'].map((x) => <li key={x} className="flex gap-2"><XCircle size={15} className="mt-0.5 shrink-0 text-alert" aria-hidden />{x}</li>)}</ul>
         </Panel>
-        <Panel title="Path to clinical" kicker="What would have to happen">
+        <Panel title="Path to clinical" kicker="What it would take">
           <ul className="space-y-1.5 text-sm text-ink-soft">{['Flight-surgeon review of every protocol', 'Validate drift detection on real astronaut or analog data', 'Sensor validation across lighting and skin tones', 'Regulatory review as software that supports medical decisions'].map((x) => <li key={x} className="flex gap-2"><CircleDashed size={15} className="mt-0.5 shrink-0 text-ice" aria-hidden />{x}</li>)}</ul>
           <button className="btn-ghost mt-3 w-full text-xs" onClick={() => h.go('next')}><Stethoscope size={14} aria-hidden /> See limitations & next steps</button>
         </Panel>

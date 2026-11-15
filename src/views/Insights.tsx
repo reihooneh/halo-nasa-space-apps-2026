@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts'
+import { ChartFrame, readout } from '../ui/readout'
+import { Area, ComposedChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts'
 import { Dumbbell, Lightbulb, Moon, Salad, Sun } from 'lucide-react'
 import { HAZ, IND, INDICATORS, type IndicatorId } from '../data/domain'
 import { useHalo } from '../state/store'
@@ -40,14 +41,13 @@ export function InsightsView() {
 
       <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
         <Panel title={`7-day forecast: ${meta.name}`} kicker="If nothing changes vs. if you follow the countermeasure" tour="forecast" right={<Illustrative text="Illustrative model" />}>
-          <div style={{ height: 260 }} role="img" aria-label="Forecast chart with uncertainty band">
+          <ChartFrame height={260} label="Forecast chart with uncertainty band">
             <ResponsiveContainer>
               <ComposedChart data={data} margin={{ top: 20, right: 8, left: -12, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                 <XAxis dataKey="d" tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(d) => `D${d}`} />
                 <YAxis tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} width={44} />
-                <Tooltip contentStyle={{ background: '#0F1626', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }} labelFormatter={(d) => `Day ${d}`}
-                  formatter={(v: any, n: any) => n === 'band' ? [`${v[0]} – ${v[1]}`, '95% band (if nothing changes)'] : [v, n === 'actual' ? 'Measured' : n === 'base' ? 'If nothing changes' : n === 'cm' ? 'With countermeasure' : 'Baseline']} />
+                {readout((d, p) => { const r = p[0]?.payload ?? {}; const f = (x: unknown) => (x == null ? null : Array.isArray(x) ? `${x[0]}–${x[1]}` : String(x)); return [`Day ${d}`, f(r.actual) && `measured ${f(r.actual)}`, f(r.base) && `if nothing changes ${f(r.base)}`, f(r.cm) && `with countermeasure ${f(r.cm)}`, f(r.band) && `95% band ${f(r.band)}`].filter(Boolean).join(' · ') })}
                 <ReferenceLine x={h.day} stroke="#A9B6CC" strokeOpacity={0.4} label={{ value: 'today', fill: '#7D8BA5', fontSize: 10, position: 'top' }} />
                 <Area dataKey="band" stroke="none" fill="#F59E0B" fillOpacity={0.12} isAnimationActive={false} />
                 <Line dataKey="center" stroke="#2DD4BF" strokeOpacity={0.5} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
@@ -56,7 +56,7 @@ export function InsightsView() {
                 <Line dataKey="cm" stroke="#34D399" strokeWidth={2.2} dot={false} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
+          </ChartFrame>
           <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
             <div className="rounded-xl border border-warn/25 bg-warn/[0.06] p-3"><div className="label text-warn">If nothing changes · D{h.day + 7}</div><div className="num mt-1 text-lg">{endBase ?? '—'} {meta.unit}</div></div>
             <div className="rounded-xl border border-ok/25 bg-ok/[0.06] p-3"><div className="label text-ok">With countermeasure · D{h.day + 7}</div><div className="num mt-1 text-lg">{endCm ?? '—'} {meta.unit}</div></div>

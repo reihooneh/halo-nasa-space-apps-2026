@@ -9,7 +9,7 @@ export function Panel({ title, kicker, right, children, className = '', tour, id
     <section className={`panel p-4 md:p-5 ${className}`} data-tour={tour} id={id} aria-label={typeof title === 'string' ? title : undefined}>
       {(title || right || kicker) && (
         <header className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
-          <div className="min-w-[180px] flex-1">
+          <div className="min-w-[min(100%,300px)] flex-1">
             {kicker && <div className="label mb-1">{kicker}</div>}
             {title && <h2 className="text-[15px] font-semibold tracking-tight text-ink">{title}</h2>}
           </div>

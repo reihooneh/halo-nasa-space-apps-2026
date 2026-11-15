@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ChartFrame, readout } from '../ui/readout'
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import { EyeOff, Lock, ShieldCheck } from 'lucide-react'
 import { useHalo } from '../state/store'
 import { idxOf } from '../sim/mission'
@@ -47,17 +48,17 @@ export function CrewView() {
       </Panel>
       <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
         <Panel title="Team behavioural signal" kicker="Aggregate only · last 45 days" right={<Prov ids={['hazIsolation', 'thirdQuarter']} />}>
-          <div style={{ height: 200 }} role="img" aria-label="Crew average mood over time">
+          <ChartFrame height={200} label="Crew average mood over time">
             <ResponsiveContainer>
               <AreaChart data={team} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                 <defs><linearGradient id="mg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#A78BFA" stopOpacity={0.5} /><stop offset="1" stopColor="#A78BFA" stopOpacity={0} /></linearGradient></defs>
                 <XAxis dataKey="d" tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(d) => `D${d}`} minTickGap={24} />
                 <YAxis domain={[1, 5]} tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} width={36} />
-                <Tooltip contentStyle={{ background: '#0F1626', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }} formatter={(v: any) => [v, 'Crew mean mood']} labelFormatter={(d) => `Day ${d}`} />
+                {readout((d, p) => `Day ${d} · crew mean mood ${p[0]?.value}/5`)}
                 <Area dataKey="mood" stroke="#A78BFA" fill="url(#mg)" strokeWidth={2} isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </ChartFrame>
           <div className="mt-2 text-sm text-ink-soft"><b className="text-ink">{behavioural} of {all.length}</b> crew have a mood or sleep signal today. Mid-mission lulls (the “third-quarter phenomenon”) are reported in some analog studies, not universally.</div>
         </Panel>
         <Panel title="Privacy model" kicker="Who sees what">

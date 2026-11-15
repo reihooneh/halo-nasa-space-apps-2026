@@ -422,7 +422,7 @@ function BleStrap() {
       <div className="mt-3 grid grid-cols-3 gap-3">
         <Stat k="Live HR" v={cur ?? '—'} u="bpm" attr="data-ble-live" />
         <Stat k="Median" v={med ?? '—'} u={`bpm · last ${recent.length} readings`} attr="data-ble-median" />
-        <Stat k="HRV RMSSD" v={hrv.rmssd ?? '—'} u={`ms · ${hrv.used} beat pairs${hrv.dropped ? `, ${hrv.dropped} filtered` : ''}`} attr="data-ble-hrv" />
+        <Stat k="HRV" v={hrv.rmssd ?? '—'} u={`ms RMSSD · ${hrv.used} beat pairs${hrv.dropped ? `, ${hrv.dropped} filtered` : ''}`} attr="data-ble-hrv" />
       </div>
       <div className="mt-2"><Trace data={hrs} color="#F43F5E" label={on ? 'Waiting for the first beat…' : 'Heart-rate trend appears here'} /></div>
       {on && <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-mute">

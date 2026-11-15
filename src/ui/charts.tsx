@@ -1,4 +1,5 @@
-import { Area, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, Scatter, CartesianGrid } from 'recharts'
+import { Area, ComposedChart, Line, ReferenceLine, ResponsiveContainer, XAxis, YAxis, Scatter, CartesianGrid } from 'recharts'
+import { ChartFrame, readout } from './readout'
 import { IND, type IndicatorId } from '../data/domain'
 import type { DayResult } from '../engine/drift'
 import { dayOfIdx, idxOf } from '../sim/mission'
@@ -18,22 +19,16 @@ export function IndicatorChart({ res, ind, day, window = 60, height = 220, showP
   }))
   const pop = meta.population
   return (
-    <div style={{ height }} role="img" aria-label={`${meta.name} over the last ${window} days with personal baseline band`}>
+    <ChartFrame height={height} label={`${meta.name} over the last ${window} days with personal baseline band`}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 18, right: 10, left: -12, bottom: 0 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
           <XAxis dataKey="day" tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} tickFormatter={(d) => (d <= 0 ? `pre ${d}` : `D${d}`)} />
           <YAxis tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} width={44} />
-          <Tooltip
-            contentStyle={{ background: '#0F1626', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }}
-            labelFormatter={(d) => `Mission day ${d}`}
-            formatter={(val: any, name: any) => {
-              if (name === 'band') return [`${val[0]} – ${val[1]} ${meta.unit}`, 'Personal range (±2 robust SD)']
-              if (name === 'c') return [`${val} ${meta.unit}`, 'Personal baseline']
-              if (name === 'v') return [`${val} ${meta.unit}`, meta.short]
-              return [null, null]
-            }}
-          />
+          {readout((d, p) => {
+            const r = p[0]?.payload; if (!r) return null
+            return `Mission day ${d} · ${meta.short} ${r.v ?? '—'} ${meta.unit} · baseline ${r.c} · personal range ${r.band[0]}–${r.band[1]}${r.state === 'drift' ? ' · drift' : r.state === 'watch' ? ' · watch' : ''}`
+          })}
           <Area dataKey="band" stroke="none" fill="#2DD4BF" fillOpacity={0.09} isAnimationActive={false} />
           <Line dataKey="c" stroke="#2DD4BF" strokeOpacity={0.6} strokeDasharray="4 4" dot={false} strokeWidth={1.2} isAnimationActive={false} />
           {showPop && pop.low != null && <ReferenceLine y={pop.low} stroke="#A9B6CC" strokeOpacity={0.45} strokeDasharray="2 6" label={{ value: `${meta.guideline.kind === "guideline" ? "guideline" : "fixed"} ${pop.low}`, fill: '#A9B6CC', fontSize: 10, position: 'insideBottomRight' }} />}
@@ -51,7 +46,7 @@ export function IndicatorChart({ res, ind, day, window = 60, height = 220, showP
           }} />
         </ComposedChart>
       </ResponsiveContainer>
-    </div>
+    </ChartFrame>
   )
 }
 

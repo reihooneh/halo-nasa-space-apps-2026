@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ChartFrame, readout } from '../ui/readout'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import { FlaskConical, Play } from 'lucide-react'
 import { runSimLab, SIMLAB_ASSUMPTIONS, type SimSummary } from '../engine/simlab'
 import { DRIFT_PARAMS } from '../engine/drift'
@@ -24,9 +25,9 @@ export function LabView() {
           <span className="text-xs text-ink-mute">Same seed → identical results.</span>
         </div>
         {res && (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat k="True declines detected · HALO" v={`${res.detectedPersonal} / ${res.driftRuns}`} sub={`${((res.detectedPersonal / res.driftRuns) * 100).toFixed(0)}%`} good />
-            <Stat k="True declines detected · fixed threshold" v={`${res.detectedPopulation} / ${res.driftRuns}`} sub={`${((res.detectedPopulation / res.driftRuns) * 100).toFixed(0)}% · missed ${res.missedByPopulation} that HALO caught`} />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+            <Stat k="Declines found · HALO" v={`${res.detectedPersonal} / ${res.driftRuns}`} sub={`${((res.detectedPersonal / res.driftRuns) * 100).toFixed(0)}%`} good />
+            <Stat k="Declines found · fixed rule" v={`${res.detectedPopulation} / ${res.driftRuns}`} sub={`${((res.detectedPopulation / res.driftRuns) * 100).toFixed(0)}% · missed ${res.missedByPopulation} that HALO caught`} />
             <Stat k="Median lead time (both detected)" v={res.medianLead != null ? `${res.medianLead} days` : '—'} sub={`mean ${res.meanLead ?? '—'} days earlier`} good />
             <Stat k="Healthy missions falsely flagged" v={`HALO ${ctrlRunsFP} / ${ctrl}`} sub={`fixed threshold ${ctrlRunsFPpop} / ${ctrl} · HALO ${res.falseAlarmPersonal} flag-days per 100 crew-days`} good />
           </div>
@@ -59,17 +60,17 @@ export function LabView() {
       )}
       <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
         <Panel title="How many days earlier HALO flagged" kicker="Missions where both methods eventually flagged">
-          <div style={{ height: 240 }} role="img" aria-label="Histogram of lead time in days">
+          <ChartFrame height={240} label="Histogram of lead time in days">
             <ResponsiveContainer>
               <BarChart data={res?.leadHistogram ?? []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                 <XAxis dataKey="bin" tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
-                <Tooltip contentStyle={{ background: '#0F1626', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }} formatter={(v: any) => [v, 'Missions']} labelFormatter={(b) => `${b} days earlier`} />
+                {readout((b, p) => `${b} days earlier · ${p[0]?.value} missions`, { fill: 'rgba(255,255,255,0.04)' })}
                 <Bar dataKey="count" fill="#2DD4BF" radius={[6, 6, 0, 0]} isAnimationActive={false} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </ChartFrame>
           <div className="mt-1 text-[11px] text-ink-mute">“&lt; 0” = the fixed 6 h rule flagged first. That happens for people whose normal sleep is already close to 6 h, the same people it falsely flags when nothing is wrong.</div>
         </Panel>
         <Panel title="Assumptions (shown so you can challenge them)" kicker={<span className="flex items-center gap-1"><FlaskConical size={12} /> Model</span>}>

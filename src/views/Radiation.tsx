@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { ChartFrame, readout } from '../ui/readout'
 import { fetchDonki, lastGood, type DonkiResult } from '../engine/donkiClient'
 const Orbit3D = lazy(() => import('../ui/Orbit3D'))
 const Habitat3D = lazy(() => import('../ui/Habitat3D'))
-import { CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
+import { CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Scatter, XAxis, YAxis, ZAxis } from 'recharts'
 import { CheckSquare, CloudDownload, ExternalLink, ShieldCheck, Square, Timer, Zap } from 'lucide-react'
 import { ReadAloud } from '../ui/kit'
 import donkiRaw from '../data/donki.json'
@@ -56,7 +57,7 @@ export function RadiationView() {
         <div className="grid gap-5 xl:grid-cols-[1fr_1fr]" data-tour="shelter">
           <Panel title={h.speActive ? 'Solar particle event: shelter protocol' : 'Shelter drill'} kicker="Storm shelter" className="border-alert/40" right={<span className="chip border-alert/50 bg-alert/10 text-alert"><Zap size={12} /> Active</span>}>
             <div className="flex items-center gap-4">
-              <div className="rounded-2xl border border-alert/40 bg-alert/10 px-4 py-3 text-center"><div className="label text-alert">Shelter within</div><div className="num text-3xl text-alert"><Timer size={18} className="mr-1 inline" aria-hidden />{mm}:{String(ss).padStart(2, '0')}</div></div>
+              <div className="rounded-2xl border border-alert/40 bg-alert/10 px-4 py-3 text-center"><div className="label whitespace-nowrap text-alert">Shelter in</div><div className="num text-3xl text-alert"><Timer size={18} className="mr-1 inline" aria-hidden />{mm}:{String(ss).padStart(2, '0')}</div></div>
               <div><p className="text-sm text-ink-soft">On 20 May 2024 the flare’s X-rays reached Mars at light speed and charged particles followed within tens of minutes (NASA). HALO starts a 20-minute shelter clock (shown accelerated).</p><div className="mt-2"><ReadAloud label="Read the checklist aloud" lines={['Solar particle event. Shelter now.', ...CHECK.map((c, k) => `Step ${k + 1}. ${c}.`)]} /></div></div>
             </div>
             <ul className="mt-3 space-y-1.5">
@@ -108,20 +109,20 @@ export function RadiationView() {
             <div><div className="label">Of career limit</div><div className="num text-xl">{((doseNow / 600) * 100).toFixed(1)}%</div></div>
             <div><div className="label">Shelter used on D{SPE_DAY}</div><div className="num text-xl">{h.mission.sheltered ? 'Yes' : 'No'}</div></div>
           </div>
-          <div className="mt-3" style={{ height: 220 }} role="img" aria-label="Cumulative radiation dose chart">
+          <div className="mt-3"><ChartFrame height={220} label="Cumulative radiation dose chart">
             <ResponsiveContainer>
               <ComposedChart data={ledger} margin={{ top: 22, right: 14, left: -8, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                 <XAxis dataKey="d" tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(d) => `D${d}`} minTickGap={30} />
                 <YAxis tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} domain={[0, 620]} width={44} />
-                <Tooltip contentStyle={{ background: '#0F1626', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }} formatter={(v: any, n) => [`${v} mSv`, n === 'cum' ? 'Cumulative' : 'Projected']} labelFormatter={(d) => `Day ${d}`} />
+                {readout((d, p) => { const r = p[0]?.payload ?? {}; return `Day ${d}${r.cum != null ? ` · cumulative ${Number(r.cum).toFixed(1)} mSv` : ''}${r.proj != null ? ` · projected ${Number(r.proj).toFixed(1)} mSv` : ''} · career limit 600 mSv` })}
                 <ReferenceLine y={600} stroke="#F43F5E" strokeDasharray="4 4" label={{ value: 'Career limit 600 mSv (NASA-STD-3001)', fill: '#F43F5E', fontSize: 10, position: 'insideBottomLeft' }} />
                 <ReferenceLine x={SPE_DAY} stroke="#F59E0B" strokeOpacity={0.6} label={{ value: `Solar storm D${SPE_DAY}`, fill: '#F59E0B', fontSize: 10, position: 'insideBottomRight' }} />
                 <Line dataKey="proj" stroke="#A9B6CC" strokeOpacity={0.3} strokeDasharray="3 5" dot={false} isAnimationActive={false} />
                 <Line dataKey="cum" stroke="#F59E0B" strokeWidth={2.2} dot={false} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
+          </ChartFrame></div>
           <div className="mt-3 space-y-1.5">
             <FactLine id={env.doseFact} compact />
             <FactLine id="careerLimit" compact />
@@ -151,19 +152,19 @@ export function RadiationView() {
 
       <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
         <Panel title="Solar flares on the mission calendar" kicker={`${DONKI.meta.counts.flr} flares · ${DONKI.meta.counts.cme} CMEs · ${DONKI.meta.counts.sep} SEP events (real)`} right={<Prov ids={['donki']} />}>
-          <div style={{ height: 220 }} role="img" aria-label="Solar flare intensity by mission day">
+          <ChartFrame height={220} label="Solar flare intensity by mission day" hint="Point at or tap a flare to see its class and date">
             <ResponsiveContainer>
               <ComposedChart margin={{ top: 22, right: 14, left: 4, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                 <XAxis type="number" dataKey="d" domain={[66, 106]} tick={{ fill: '#7D8BA5', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(d) => `D${d}`} />
                 <YAxis type="number" dataKey="flux" scale="log" domain={[1e-6, 2e-3]} tick={{ fill: '#A9B6CC', fontSize: 11 }} tickLine={false} axisLine={false} width={40} ticks={[1e-6, 1e-5, 1e-4, 1e-3]} tickFormatter={(v) => (v >= 1e-3 ? 'X10' : v >= 1e-4 ? 'X1' : v >= 1e-5 ? 'M1' : 'C1')} />
                 <ZAxis range={[28, 28]} />
-                <Tooltip contentStyle={{ background: '#0F1626', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }} formatter={(_: any, __: any, p: any) => [p.payload.cls, 'Class']} labelFormatter={() => ''} />
+                {readout((_, p) => { const r = p[0]?.payload; return r ? `${r.cls} flare · mission day ${Math.round(r.d)} · ${String(r.id).slice(0, 10)} (NASA DONKI)` : null }, false)}
                 <ReferenceLine x={h.day} stroke="#2DD4BF" label={{ value: `D${h.day}`, fill: '#2DD4BF', fontSize: 10, position: 'insideTopRight' }} />
                 <Scatter data={flares} fill="#F59E0B" isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
+          </ChartFrame>
           <div className="mt-1 text-[11px] text-ink-mute">Peak X-ray class by mission day (log scale: C1 &lt; M1 &lt; X1 &lt; X10). The {x87.cls} on D84 is the largest flare in the set; the 20 May far-side eruption was not seen from Earth.</div>
         </Panel>
         <Panel title={`Space weather near D${h.day}`} kicker="± 6 days · every event links to DONKI">

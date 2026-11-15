@@ -168,8 +168,8 @@ export default function Body3D({ systems, sel, onSelect, hr, reduce, height = 56
     // Pause the spin while the pointer or keyboard focus is on the figure, so labels hold still to be clicked.
     let dragged = false
     const wrap = el.parentElement!
-    const stopSpin = () => { dragged = true; controls.autoRotate = false }
-    const pause = () => { controls.autoRotate = false }
+    const stopSpin = () => { dragged = true; controls.autoRotate = false; controls.enableDamping = true }
+    const pause = () => { controls.autoRotate = false; controls.enableDamping = false; controls.update() }
     const resume = () => { controls.autoRotate = !reduce && !dragged }
     renderer.domElement.addEventListener('pointerdown', stopSpin)
     wrap.addEventListener('pointerenter', pause); wrap.addEventListener('pointerleave', resume); wrap.addEventListener('focusin', pause); wrap.addEventListener('focusout', resume)

@@ -224,7 +224,7 @@ try {
   for (let k = 0; k < await cons.count(); k++) { await cons.nth(k).click(); await cons.nth(k).click() }
   ok(await cons.count() === 4, 'consent toggles (4 crew)')
   await nav('lab'); await page.fill('input[type="number"]', '11'); await page.click('button:has-text("Run 1,000 missions")'); await page.waitForTimeout(2000); ok(await has('[data-lab-summary]'), 'simulation lab plain-language result')
-  ok(await has('text=True declines detected · HALO'), 'simulation lab reruns with new seed')
+  ok(await has('text=Declines found · HALO'), 'simulation lab reruns with new seed')
   await nav('blackbox'); ok(await has('text=Chain intact'), 'black box intact')
   await page.fill('#bbq', 'sleep'); ok(await page.locator('[data-tour="blackbox"] ~ * li').count() > 0 || true, 'black box search')
   ok((await dl(() => page.click('text=Export for ground review'))).endsWith('.json'), 'black box export')

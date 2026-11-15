@@ -90,17 +90,17 @@ export default function App() {
   return (
     <div className={`halo-bg flex min-h-full ${h.earthMode ? 'earth-mode' : ''}`}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 btn-primary">Skip to content</a>
-      <nav aria-label="Main" className="no-print sticky top-0 hidden h-screen w-[236px] shrink-0 flex-col border-r border-white/[0.06] bg-space-950/70 px-3 py-4 lg:flex">
+      <nav aria-label="Main" className="no-print sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col border-r border-white/[0.06] bg-space-950/70 px-3 py-4 lg:flex">
         <Brand />
         <div className="mt-5 flex-1 space-y-4 overflow-y-auto scroll-thin pr-1">
           {groups.map((g) => (
             <div key={g}>
-              <div className="label flex items-baseline gap-1.5 px-2 pb-1.5"><span className="num text-teal/80">{GROUPS[g].n}</span>{g}<span className="ml-auto break-words text-[9.5px] normal-case tracking-normal text-ink-mute">{GROUPS[g].text}</span></div>
+              <div className="px-2 pb-1.5"><div className="label flex items-baseline gap-1.5 whitespace-nowrap"><span className="num text-teal/80">{GROUPS[g].n}</span>{g}</div><div className="mt-0.5 whitespace-nowrap text-[11px] text-ink-mute">{GROUPS[g].text}</div></div>
               <ul className="space-y-0.5">
                 {NAV.filter((n) => n.group === g).map((n) => (
                   <li key={n.id}>
                     <button data-nav={n.id} onClick={() => h.go(n.id)} aria-current={h.view === n.id ? 'page' : undefined}
-                      className={`group focus-ring tap relative flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13.5px] transition-colors ${h.view === n.id ? 'bg-teal/10 text-teal' : 'text-ink-soft hover:bg-white/[0.04] hover:text-ink'}`}>
+                      className={`group focus-ring tap relative flex w-full items-center gap-2.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-left text-[13.5px] transition-colors ${h.view === n.id ? 'bg-teal/10 text-teal' : 'text-ink-soft hover:bg-white/[0.04] hover:text-ink'}`}>
                       {h.view === n.id && <motion.span layoutId="navpill" className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-teal" />}
                       <n.Icon size={16} aria-hidden /> {label(n)}
                     </button>

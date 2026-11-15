@@ -51,6 +51,17 @@ const audit = () => {
     const c = e.parentElement.getBoundingClientRect(), r = e.getBoundingClientRect()
     if (r.width && (r.left < c.left - 1 || r.right > c.right + 1 || r.top < c.top - 1 || r.bottom > c.bottom + 1)) out.push(`CLIP label "${name(e)}" partly outside its 3D view`)
   }
+  // 2c. short labels and headings broken over two lines (e.g. a nav subtitle wrapping)
+  for (const e of document.querySelectorAll('aside *, nav *, h1, h2, h3, .label, [data-page-header] *')) {
+    if (!vis(e) || e.closest('svg') || e.closest('.sr-only')) continue
+    const own = [...e.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim())
+    for (const n of own) {
+      const t = n.textContent.trim(); const whole = e.textContent.trim(); if (whole.length > 40 || t.split(/\s+/).length < 2) continue
+      const r = document.createRange(); r.selectNodeContents(n)
+      const tops = new Set([...r.getClientRects()].filter((q) => q.width > 1).map((q) => Math.round(q.top)))
+      if (tops.size > 1) out.push(`WRAP "${t}" breaks over ${tops.size} lines`)
+    }
+  }
   // 3. spill outside panels / viewport
   const W = document.documentElement.clientWidth
   if (document.documentElement.scrollWidth > W + 1) out.push(`PAGE scrolls sideways (${document.documentElement.scrollWidth}>${W})`)
@@ -64,6 +75,39 @@ const audit = () => {
   }
   return out
 }
+// Hover test: point at each chart and at interactive items; whatever pops up must not cover the point being hovered.
+async function hoverTest(p) {
+  const out = []
+  const frames = await p.$$('[data-chart-frame] .recharts-wrapper')
+  for (const f of frames) {
+    await f.evaluate((e) => e.scrollIntoView({ block: 'center' })); await p.waitForTimeout(80)
+    const b = await f.boundingBox(); if (!b || b.width < 40) continue
+    for (const fx of [0.2, 0.5, 0.8]) {
+      const x = b.x + b.width * fx, y = b.y + b.height * 0.5
+      await p.mouse.move(x, y); await p.waitForTimeout(120)
+      const top = await p.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e ? (e.closest('.recharts-wrapper') ? 'chart' : (e.className?.baseVal ?? e.className) + ' ' + (e.textContent || '').slice(0, 30)) : 'none' }, [x, y])
+      if (top !== 'chart') out.push(`HOVER chart covered at its own pointer by "${top}"`)
+      const tip = await p.evaluate(() => { const t = document.querySelector('.recharts-tooltip-wrapper'); return t && t.getBoundingClientRect().width > 4 ? 'floating tooltip visible' : '' })
+      if (tip) out.push('HOVER ' + tip)
+    }
+  }
+  const items = await p.$$('main button:visible, main a:visible, aside button:visible')
+  const top = ([x, y, h]) => { const e = document.elementFromPoint(x, y); if (!e || e === h || h.contains(e) || e.contains(h)) return 'ok'; const c = e.closest('button, a'); return c && c.textContent === h.textContent ? 'ok' : `${e.tagName}.${String(e.className.baseVal ?? e.className).slice(0, 40)} "${(e.textContent || '').slice(0, 30)}"` }
+  for (const it of items.slice(0, 60)) {
+    try {
+      await p.mouse.move(2, 2)
+      await it.evaluate((e) => e.scrollIntoView({ block: 'center' })); await p.waitForTimeout(80)
+      const b = await it.boundingBox(); if (!b || b.width < 4 || b.height < 4) continue
+      const x = b.x + b.width / 2, y = b.y + b.height / 2
+      if ((await p.evaluate(top, [x, y, it])) !== 'ok') continue // already behind something (e.g. sticky header) before any hover
+      await p.mouse.move(x, y); await p.waitForTimeout(450)
+      const ok = await p.evaluate(top, [x, y, it])
+      if (ok !== 'ok') out.push(`HOVER "${(await it.innerText().catch(() => '')).split('\n')[0].slice(0, 30)}" covered when hovered by ${ok}`)
+    } catch { /* element re-rendered; skip */ }
+  }
+  await p.mouse.move(2, 2)
+  return out
+}
 for (const W of WIDTHS) {
   const p = await b.newPage({ viewport: { width: W, height: 900 } })
   await p.goto(`http://localhost:${PORT}/`); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(500)
@@ -75,7 +119,8 @@ for (const W of WIDTHS) {
       await p.evaluate((v) => document.querySelector(`[data-nav="${v}"]`)?.click(), v)
       await p.waitForTimeout(v === 'body' || v === 'radiation' ? 2600 : 350)
       if (v === 'body') { await p.hover('[data-body3d]').catch(() => {}); await p.waitForTimeout(300) } else { await p.mouse.move(2, 2); await p.waitForTimeout(150) }
-      const r = await p.evaluate(audit)
+      let r = await p.evaluate(audit)
+      if (d === DAYS[0]) r = r.concat(await hoverTest(p))
       if (r.length) { total += r.length; console.log(`\n[${W}px D${d} ${v}]`); for (const x of [...new Set(r)].slice(0, 12)) console.log('  ' + x) }
     }
   }
