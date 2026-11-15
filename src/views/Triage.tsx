@@ -15,7 +15,7 @@ export function TriageView() {
         <Panel title="Autonomous Triage" kicker="Deterministic · offline · explainable" tour="triage" right={<><Simulated /><Illustrative text="Protocol steps illustrative" /></>}>
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
             <div><div className="label">Decision</div><div className="mt-1"><LevelPill level={t.level} big /></div></div>
-            <div className="min-w-0 flex-1 text-sm text-ink-soft">{t.groundNote}</div>
+            <div className="min-w-[260px] flex-1 basis-[320px] text-sm text-ink-soft">{t.groundNote}</div>
             {t.hits.length > 0 && <ReadAloud label="Read protocol aloud" lines={[`Triage decision: ${t.level === 'self' ? 'self-manage' : t.level}.`, ...t.hits.flatMap((r) => [r.title + '.', ...r.steps.map((s, k) => `Step ${k + 1}. ${s.text}`)])]} />}
             {t.contactGround && <button className="btn-danger" onClick={() => { h.sendGround(`URGENT D${h.day}: ${t.hits.filter((x) => x.level === 'urgent').map((x) => x.title).join('; ')}`, 'packet'); h.pushToast('Urgent packet queued', 'Contacting flight surgeon. HALO continues the protocol meanwhile.', 'alert') }}><Send size={15} aria-hidden /> Contact {h.t('surgeon')} now</button>}
           </div>
