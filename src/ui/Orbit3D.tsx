@@ -170,8 +170,9 @@ export default function Orbit3D({ day, reduce, height = 420, delayLabel }: { day
       for (const [key, obj] of [['sun', sun], ['earth', earth], ['mars', mars], ['craft', craft]] as const) {
         const lab = labels.current[key]; if (!lab) continue
         v.copy(obj.position).project(cam)
-        lab.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * height}px)`
-        lab.style.opacity = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05 ? '1' : '0'
+        const px = ((v.x + 1) / 2) * w, py = ((1 - v.y) / 2) * height
+        lab.style.transform = `translate(${px}px, ${py}px)`
+        lab.style.opacity = v.z < 1 && px > 50 && px < w - 50 && py > 76 && py < height - 30 ? '1' : '0'
       }
       raf = requestAnimationFrame(tick)
     }
@@ -209,7 +210,7 @@ export default function Orbit3D({ day, reduce, height = 420, delayLabel }: { day
             className={`focus-ring rounded-lg px-2.5 py-1 text-[11.5px] font-medium transition-colors ${view === v ? 'bg-teal/15 text-teal' : 'text-ink-soft hover:text-ink'}`}>{v === 'overview' ? 'Overview' : v === 'follow' ? 'Follow crew' : 'Top-down'}</button>
         ))}
       </div>
-      {stormy && <div className="absolute right-3 top-3 rounded-lg border border-alert/50 bg-alert/15 px-2 py-1 text-[11px] font-medium text-alert">Solar storm passing</div>}
+      {stormy && <div className="absolute left-3 top-14 rounded-lg sm:left-auto sm:right-3 sm:top-3 border border-alert/50 bg-alert/15 px-2 py-1 text-[11px] font-medium text-alert">Solar storm passing</div>}
       <div className="pointer-events-none absolute bottom-2 left-3 right-3 flex flex-wrap items-end justify-between gap-2 text-[10.5px] text-ink-mute">
         <span>Orbits to scale (1.00 and 1.52 AU) · sizes enlarged · timing schematic · drag to rotate, scroll to zoom</span>
         <span className="num rounded-md bg-space-950/70 px-1.5 py-0.5 text-ink-soft">{pct}% of the way · {r.toFixed(2)} AU from Sun{delayLabel ? ` · signal ${delayLabel} one-way` : ''}</span>

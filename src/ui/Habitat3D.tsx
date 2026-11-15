@@ -88,7 +88,7 @@ export default function Habitat3D({ storm, inShelter, reduce, height = 330 }: { 
       ;(water.material as THREE.MeshStandardMaterial).emissiveIntensity = st && !reduce ? 0.6 + 0.3 * Math.sin(t * 4) : 0.5
       renderer.render(scene, cam)
       const w = el.clientWidth
-      ROOMS.forEach((r, i) => { const lab = labels.current[i]; if (!lab) return; v.set((r.x0 + r.x1) / 2, i === 4 ? 1.25 : 0.55, 0).project(cam); lab.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * height}px) translate(-50%, -50%)` })
+      ROOMS.forEach((r, i) => { const lab = labels.current[i]; if (!lab) return; v.set((r.x0 + r.x1) / 2, i === 4 ? 1.25 : 0.55, 0).project(cam); const hw = lab.offsetWidth / 2 + 6, hh = lab.offsetHeight / 2 + 4; const x = Math.max(hw, Math.min(w - hw, ((v.x + 1) / 2) * w)), y = Math.max(hh + 34, Math.min(height - hh - 26, ((1 - v.y) / 2) * height)); lab.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)` })
       raf = requestAnimationFrame(tick)
     }
     tick()

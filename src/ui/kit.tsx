@@ -62,15 +62,18 @@ export function Prov({ ids, label }: { ids: string[]; label?: string }) {
       {label && <span className="text-[11px] text-ink-mute">{label}</span>}
       {srcs.map((s) => (
         <a key={s.id} href={s.url} target="_blank" rel="noreferrer" title={s.title}
-          className="focus-ring inline-flex items-center gap-1 rounded-md border border-teal/25 bg-teal/[0.07] px-1.5 py-0.5 text-[10.5px] font-medium text-teal hover:bg-teal/15">
-          {s.org}<span className="text-teal/60">·</span><span className="max-w-[160px] truncate">{shortTitle(s.title)}</span><ExternalLink size={10} aria-hidden />
+          className="focus-ring inline-flex max-w-full items-start gap-1 rounded-md border border-teal/25 bg-teal/[0.07] px-1.5 py-0.5 text-left text-[10.5px] font-medium leading-snug text-teal hover:bg-teal/15">
+          <span className="min-w-0 break-words"><span className="whitespace-nowrap">{s.org}</span><span className="text-teal/60"> · </span>{shortTitle(s.title)}</span><ExternalLink size={10} className="mt-[3px] shrink-0" aria-hidden />
         </a>
       ))}
     </span>
   )
 }
-function shortTitle(t: string) {
-  return t.replace(/^NASA HRP Hazard: /, '').replace(/^NASA HRP: /, '').replace(/^NASA OCHMO Technical Brief: /, '').replace(/^NASA: /, '').replace(/^CSA: /, '').replace(/^NASA CCMC /, '').split(' (')[0]
+/** Chip label: the name before the colon (author, organisation or document); the full title is in the tooltip and on Sources. */
+export function shortTitle(t: string) {
+  const s = t.replace(/^NASA HRP Hazard: /, '').replace(/^NASA HRP: /, '').replace(/^NASA OCHMO Technical Brief: /, '').replace(/^NASA: /, '').replace(/^CSA: /, '').replace(/^NASA CCMC /, '').split(' (')[0]
+  const head = s.split(': ')[0]
+  return head.length >= 3 && head.length < s.length ? head : s
 }
 
 export function Illustrative({ text = 'Illustrative, not medical advice' }: { text?: string }) {

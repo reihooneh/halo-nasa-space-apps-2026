@@ -69,7 +69,7 @@ export function ReadinessView() {
                 return (
                   <motion.li key={p.id} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: k * 0.04 }} className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
                     <span className="num w-6 text-xs text-ink-mute">{String(k + 1).padStart(2, '0')}</span>
-                    <div className="min-w-0 flex-1"><div className="text-sm font-medium">{p.name}</div><div className="truncate text-xs text-ink-mute">{p.why}</div></div>
+                    <div className="min-w-0 flex-1"><div className="text-sm font-medium">{p.name}</div><div className="break-words text-xs text-ink-mute">{p.why}</div></div>
                     <span className="chip shrink-0" style={{ borderColor: g.color + '66', color: g.color, background: g.color + '14' }}><g.Icon size={13} aria-hidden />{g.label}</span>
                   </motion.li>
                 )
@@ -192,7 +192,7 @@ function PreEva() {
         {items.map((i) => (
           <li key={i.k} className="flex items-center gap-2 text-[12.5px]">
             <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] ${i.ok == null ? 'bg-white/10 text-ink-mute' : i.ok ? 'bg-ok/20 text-ok' : 'bg-warn/20 text-warn'}`} aria-hidden>{i.ok == null ? '–' : i.ok ? '✓' : '!'}</span>
-            <span className="text-ink-soft">{i.k}</span><span className="ml-auto truncate pl-2 text-right text-ink-mute">{i.v}</span>
+            <span className="text-ink-soft">{i.k}</span><span className="ml-auto break-words pl-2 text-right text-ink-mute">{i.v}</span>
             <span className="sr-only">{i.ok == null ? 'not available' : i.ok ? 'clear' : 'needs attention'}</span>
           </li>
         ))}

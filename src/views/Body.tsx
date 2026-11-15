@@ -61,7 +61,7 @@ export function BodyView() {
                     aria-pressed={sel === sys.id} data-system-btn={sys.id}
                     className={`focus-ring tap flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition-colors ${sel === sys.id ? 'border-teal/50 bg-teal/[0.08]' : 'border-white/[0.06] hover:bg-white/[0.04]'} ${lens(h.hazard, sys.hazards)}`}>
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: m.color + '1f', color: m.color }}><I size={15} aria-hidden /></span>
-                    <span className="min-w-0 flex-1"><span className="block truncate text-[13px] text-ink">{sys.name}</span><span className={`flex items-center gap-1 text-[11px] ${m.text}`}><m.Icon size={11} aria-hidden />{m.label}</span></span>
+                    <span className="min-w-0 flex-1"><span className="block break-words text-[13px] text-ink">{sys.name}</span><span className={`flex items-center gap-1 text-[11px] ${m.text}`}><m.Icon size={11} aria-hidden />{m.label}</span></span>
                   </button>
                 </li>
               )
@@ -198,7 +198,7 @@ function TodayBySystem({ onPick, sel }: { onPick: (s: SystemId) => void; sel: Sy
       <ul className="divide-y divide-white/[0.05]">
         {SYSTEMS.map((s) => { const m = STATE_META[stateOf(s.id)]; return (
           <li key={s.id}><button onClick={() => onPick(s.id)} className={`focus-ring flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left text-[12.5px] hover:bg-white/[0.04] ${sel === s.id ? 'bg-teal/[0.06]' : ''}`}>
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: m.color }} aria-hidden /><span className="w-36 shrink-0 truncate text-ink">{s.name}</span><span className="num min-w-0 flex-1 truncate text-ink-soft">{row(s.id)}</span><span className={`shrink-0 text-[11px] ${m.text}`}>{m.label}</span>
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: m.color }} aria-hidden /><span className="w-36 shrink-0 break-words text-ink">{s.name}</span><span className="num min-w-0 flex-1 break-words text-ink-soft">{row(s.id)}</span><span className={`shrink-0 text-[11px] ${m.text}`}>{m.label}</span>
           </button></li>) })}
       </ul>
     </div>

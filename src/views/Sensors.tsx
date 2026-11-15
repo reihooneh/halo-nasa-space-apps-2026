@@ -426,7 +426,7 @@ function BleStrap() {
       </div>
       <div className="mt-2"><Trace data={hrs} color="#F43F5E" label={on ? 'Waiting for the first beat…' : 'Heart-rate trend appears here'} /></div>
       {on && <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-mute">
-        <span className="truncate">{name}</span>
+        <span className="break-words">{name}</span>
         {battery != null && <span className="chip border-white/10 px-2 py-0.5 text-[10.5px]" data-ble-battery><BatteryMedium size={11} aria-hidden />{battery}%</span>}
         {contact !== 'unsupported' && <span className={`chip px-2 py-0.5 text-[10.5px] ${contact === 'ok' ? 'border-ok/30 text-ok' : 'border-warn/40 text-warn'}`} data-ble-contact={contact}>{contact === 'ok' ? 'Skin contact good' : 'No skin contact'}</span>}
         {hrs.length > 0 && <span className="num">range {Math.min(...hrs)}–{Math.max(...hrs)} bpm</span>}

@@ -293,7 +293,7 @@ function BalanceTest() {
       {mode === 'done' && <div className="mt-3 rounded-xl bg-white/[0.03] p-3 text-sm">Saved: <span className="num">{score}</span>. <button className="text-teal underline" onClick={() => setMode('idle')}>Repeat</button></div>}
       <div className="mt-3 rounded-xl border border-white/[0.06] p-3">
         <div className="label mb-1.5">Recent checks</div>
-        <ul className="space-y-1 text-xs text-ink-soft">{h.allTests.filter((t) => t.kind === 'balance' && t.day <= h.day).slice(-4).reverse().map((t, k) => <li key={k} className="flex items-center gap-2"><span className="num w-10 text-ink-mute">D{t.day}</span><span className={`h-1.5 w-1.5 rounded-full ${t.value < 0 ? 'bg-warn' : 'bg-ok'}`} aria-hidden /><span className="truncate">{t.detail}</span></li>)}</ul>
+        <ul className="space-y-1 text-xs text-ink-soft">{h.allTests.filter((t) => t.kind === 'balance' && t.day <= h.day).slice(-4).reverse().map((t, k) => <li key={k} className="flex items-center gap-2"><span className="num w-10 text-ink-mute">D{t.day}</span><span className={`h-1.5 w-1.5 rounded-full ${t.value < 0 ? 'bg-warn' : 'bg-ok'}`} aria-hidden /><span className="break-words">{t.detail}</span></li>)}</ul>
         <p className="mt-2 text-[11px] text-ink-mute">A drop from your own usual result feeds the EVA Go/No-Go poll and Landing Readiness.</p>
       </div>
       <div className="mt-2"><Illustrative text="Go/no-go aid, not clinical" /></div>

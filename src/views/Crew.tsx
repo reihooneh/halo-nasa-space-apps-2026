@@ -31,7 +31,7 @@ export function CrewView() {
               <div key={c.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal/15 text-sm font-semibold text-teal">{c.initials}</div>
-                  <div className="min-w-0"><div className="truncate text-sm font-medium">{c.name}</div><div className="text-xs text-ink-mute">{c.role}</div></div>
+                  <div className="min-w-0"><div className="break-words text-sm font-medium">{c.name}</div><div className="text-xs text-ink-mute">{c.role}</div></div>
                 </div>
                 <div className="mt-3 flex items-center justify-between"><span className="label">Health index</span><span className="num text-xl">{d.chi.score}</span></div>
                 <div className="mt-2"><LevelPill level={d.triage.level} /></div>

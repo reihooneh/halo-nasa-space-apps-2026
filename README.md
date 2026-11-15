@@ -1,5 +1,10 @@
 # HALO · Health Autonomy Loop for Orbit
 
+<p align="center"><img src="docs/orbital-vitals-logo.png" alt="Orbital Vitals logo" width="420"></p>
+
+**Team:** Orbital Vitals · NASA Space Apps Challenge 2026, Sydney · Challenge: *Create Health Monitoring Software for Astronauts on Space Missions*
+
+
 **NASA Space Apps Challenge 2026 · Challenge: Create Health Monitoring Software for Astronauts on Space Missions · Sydney Local Event**
 
 > When the flight surgeon is up to 20 minutes away, HALO is the astronaut's health copilot. It learns each astronaut's own baseline, spots drift before it becomes an emergency, ties every change to NASA's five spaceflight hazards (RIDGE), and says exactly what to do next.
@@ -17,10 +22,10 @@
 ```bash
 npm install
 npm run dev          # http://localhost:5173
-npm test             # 65 unit tests (drift engine, guideline triage, clinical categories, hash chain, scenario, sensors, Bland–Altman, voice grammar)
+npm test             # 73 unit tests (drift engine, guideline triage, clinical categories, hash chain, scenario, sensors, Bland–Altman, voice grammar)
 npm run build        # static site in dist/ (deploy to Netlify, Vercel or GitHub Pages)
 npm run build:single # one self-contained offline file: dist-single/index.html
-npm run e2e          # every-button end-to-end test, 127 checks (needs Chrome; CHROME=/path/to/chrome)
+npm run e2e          # every-button end-to-end test, 128 checks (needs Chrome; CHROME=/path/to/chrome)
 npm run a11y         # axe-core WCAG 2.1 A/AA audit of every view and mode
 ```
 
@@ -77,6 +82,8 @@ npm run a11y         # axe-core WCAG 2.1 A/AA audit of every view and mode
 | 3D | Interactive three.js Earth→Mars transfer (orbits to scale, Kepler timing) with the crew on the current day and the storm shell around D90; WebGL fallback | Radiation & Space Weather |
 | 3D body & habitat | 3D hologram body map with seven selectable systems and a beating heart at the logged rate; 3D habitat cutaway where crew move into the water-walled shelter as the checklist is ticked | Body Map, Radiation |
 | Sensor bench | `node e2e/sensors.mjs`: Chrome's fake camera plays pulsing-skin videos at 10 known rates (48–120 bpm) and HALO must read each within 2 bpm; a mock Bluetooth GATT strap runs 11 packet and failure scenarios | e2e/ |
+| Live NASA data | Official DONKI API (`ccmc.gsfc.nasa.gov/DONKI-API`) with `api.nasa.gov` as a backup endpoint: parallel requests, 8 s timeout, retries with backoff, record validation, de-duplication and a last-good cache; falls back to bundled real events offline (`src/engine/donkiClient.ts`, 8 unit tests) | Radiation & Space Weather |
+| Layout audit | `node e2e/overlap.mjs` checks every page at 1440, 1024, 768 and 390 px on mission days 57, 90 and 157 for cut-off text, overlapping text and content spilling out of panels: 0 issues | e2e/ |
 | PWA | Installable, offline after first visit | Production build |
 | Extras | First-visit welcome card, Mission Debrief, pre-queued ground traffic, global Earth Mode, one-handed glove quick bar, mobile slim header | Everywhere |
 
@@ -104,15 +111,15 @@ src/views/      one file per screen;  src/ui/ shared kit, charts, "Why?" drawer
 scripts/build_donki.py   raw DONKI exports (data/raw/) → src/data/donki.json, no invented events
 src/data/clinical.ts  guideline categories (AHA, NHLBI, CDC, ADA, AASM), PVT-B and PHQ-2 constants
 src/engine/agreement.ts  Bland–Altman;  src/voice/ command grammar + mic UI;  src/ui/Orbit3D.tsx three.js scene
-e2e/run.mjs     Playwright end-to-end test (127 checks, screenshots in e2e/shots/)
+e2e/run.mjs     Playwright end-to-end test (128 checks, screenshots in e2e/shots/)
 ```
 
 100% client-side, no backend, no personal data. State persists in `localStorage` (wrapped in try/catch); **Reset demo** restores the start state.
 
 ## Verification
 
-- `npm test`: 46/65 unit tests pass (robust stats, persistence, adaptation, missing data, hysteresis, concern direction, guideline rule, AHA/ADA/CDC/AASM categories, PHQ-2, triage incl. crisis, low-BP, ADA levels, medkit and autonomy, SHA-256 vectors, tamper detection, forecast band, determinism, DONKI ID checks, dose limits, camera pulse estimator, Bluetooth packet parsing, HRV, Bland–Altman, voice grammar).
-- `npm run e2e`: 118/127 checks pass, clicking every button and flow in all 18 screens (incl. PHQ-2, Bland–Altman, sol planner, 3D view, typed voice commands, PWA registration) (sensors with Chrome's fake camera, downloads, medkit, consent, modes, welcome, debrief, full story), no horizontal overflow at 390/1024/1440/1920 px, offline load, **0 console errors**.
+- `npm test`: 46/73 unit tests pass (robust stats, persistence, adaptation, missing data, hysteresis, concern direction, guideline rule, AHA/ADA/CDC/AASM categories, PHQ-2, triage incl. crisis, low-BP, ADA levels, medkit and autonomy, SHA-256 vectors, tamper detection, forecast band, determinism, DONKI ID checks, dose limits, camera pulse estimator, Bluetooth packet parsing, HRV, Bland–Altman, voice grammar).
+- `npm run e2e`: 118/128 checks pass, clicking every button and flow in all 18 screens (incl. PHQ-2, Bland–Altman, sol planner, 3D view, typed voice commands, PWA registration) (sensors with Chrome's fake camera, downloads, medkit, consent, modes, welcome, debrief, full story), no horizontal overflow at 390/1024/1440/1920 px, offline load, **0 console errors**.
 - `npm run a11y`: axe-core WCAG 2.1 A + AA, **0 violations** across 29 states (every view, storm and fever days, drawers, dialogs, high contrast, glove mode, judge overlay).
 
 ## Honest limitations

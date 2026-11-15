@@ -207,10 +207,10 @@ function IndCard({ id, onWhy }: { id: IndicatorId; onWhy: (i: IndicatorId) => vo
       style={{ borderColor: st === 'drift' ? meta.color + '77' : st === 'watch' ? meta.color + '44' : undefined }}
 >
       {(st === 'drift' || st === 'watch') && <span className="pointer-events-none absolute inset-x-0 top-0 h-[2px]" style={{ background: meta.color }} aria-hidden />}
-      <div className="flex items-center justify-between gap-1"><span className="truncate text-[12px] text-ink-soft">{ind.short}</span><HelpCircle size={12} className="shrink-0 text-ink-mute" aria-hidden /></div>
+      <div className="flex items-center justify-between gap-1"><span className="break-words text-[12px] text-ink-soft">{ind.short}</span><HelpCircle size={12} className="shrink-0 text-ink-mute" aria-hidden /></div>
       <div className="mt-1 flex items-baseline gap-1"><span className="num text-[22px] font-semibold">{v ?? '—'}</span><span className="text-[11px] text-ink-mute">{ind.unit}</span></div>
       <div className="my-1.5"><Spark res={res} day={h.day} color={meta.color} /></div>
-      <div className="flex flex-wrap items-center gap-1"><StatePill state={st} small />{cls && <span className={`truncate rounded-full border px-1.5 py-[1px] text-[10px] ${TONE[cls.tone]}`} title="Category from published clinical guideline">{cls.label}</span>}</div>
+      <div className="flex flex-wrap items-center gap-1"><StatePill state={st} small />{cls && <span className={`break-words rounded-full border px-1.5 py-[1px] text-[10px] ${TONE[cls.tone]}`} title="Category from published clinical guideline">{cls.label}</span>}</div>
       <span className="sr-only">. Open explanation of {ind.name.toLowerCase()}</span>
     </motion.button>
   )
@@ -224,8 +224,8 @@ function WeeklyChecks() {
     <button onClick={() => h.go('log')} className="focus-ring panel tap p-3 text-left hover:border-white/15" data-card="weekly">
       <div className="text-[12px] text-ink-soft">Weekly checks</div>
       <div className="mt-2 space-y-1.5 text-[12px]">
-        <div className="flex items-center gap-1.5"><Eye size={13} className="text-teal" aria-hidden /><span className="truncate">Vision: {v ? v.detail.split(' (')[0] : '—'}</span></div>
-        <div className="flex items-center gap-1.5"><Footprints size={13} className="text-teal" aria-hidden /><span className="truncate">Balance: {b ? b.detail.split(' (')[0] : '—'}</span></div>
+        <div className="flex items-center gap-1.5"><Eye size={13} className="text-teal" aria-hidden /><span className="break-words">Vision: {v ? v.detail.split(' (')[0] : '—'}</span></div>
+        <div className="flex items-center gap-1.5"><Footprints size={13} className="text-teal" aria-hidden /><span className="break-words">Balance: {b ? b.detail.split(' (')[0] : '—'}</span></div>
       </div>
       <div className="mt-2"><StatePill state={v && v.value < 0 || b && b.value < 0 ? 'watch' : 'ok'} small /></div>
     </button>

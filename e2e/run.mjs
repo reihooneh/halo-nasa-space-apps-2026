@@ -171,7 +171,16 @@ try {
   ok((await page.locator('[data-tour="shelter"] li button[aria-pressed="true"]').count()) === nb, `shelter checklist: all ${nb} steps ticked`); await page.click('button:has-text("Read the checklist aloud")')
   ok(await page.locator('a:has-text("NASA CCMC DONKI")').count() >= 3, 'DONKI links on events'); await shot(page, 'radiation-storm')
   await day(57); await page.click('text=Run a shelter drill'); ok(await has('text=Shelter drill'), 'shelter drill'); await page.click('text=End drill')
-  await page.click('text=Try live DONKI'); await page.waitForTimeout(8000); ok(await has('text=bundled cache'), 'live DONKI fallback')
+  // Live NASA DONKI: served by a stand-in for ccmc.gsfc.nasa.gov with real-format records, then a full outage
+  const J = (b) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(b) })
+  await page.route('https://ccmc.gsfc.nasa.gov/DONKI-API/get/**', (r) => { const u = r.request().url(); r.fulfill(J(u.includes('/FLR') ? [{ flrID: 'F1', beginTime: '2026-11-10T03:00Z', classType: 'X1.2', activeRegionNum: 14281 }, { flrID: 'F2', beginTime: '2026-11-12T09:00Z', classType: 'M3.1' }] : u.includes('/CME') ? [{ activityID: 'C1', startTime: '2026-11-10T04:00Z', cmeAnalyses: [{ speed: 1450, isMostAccurate: true }] }] : [])) })
+  await page.click('[data-donki-live]'); await page.waitForSelector('[data-live-donki] [role="status"]')
+  ok(await has('text=Live from ccmc.gsfc.nasa.gov/DONKI-API') && await has('text=2 flares (largest X1.2)'), 'live NASA DONKI: parsed, counted, largest flare found')
+  await page.unroute('https://ccmc.gsfc.nasa.gov/DONKI-API/get/**')
+  await page.route('https://ccmc.gsfc.nasa.gov/**', (r) => r.abort()); await page.route('https://api.nasa.gov/**', (r) => r.abort())
+  await page.click('[data-donki-live]'); await page.waitForSelector('text=could not be reached', { timeout: 20000 })
+  ok(await has('text=Last live result from') && await has('text=bundled real events'), 'NASA outage: keeps last good result + bundled events, no crash')
+  await page.unroute('https://ccmc.gsfc.nasa.gov/**'); await page.unroute('https://api.nasa.gov/**')
 
   console.log('Triage + medkit')
   await day(157); await nav('triage')

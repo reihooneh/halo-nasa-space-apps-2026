@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { fetchDonki, lastGood, type DonkiResult } from '../engine/donkiClient'
 const Orbit3D = lazy(() => import('../ui/Orbit3D'))
 const Habitat3D = lazy(() => import('../ui/Habitat3D'))
 import { CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
@@ -91,7 +92,7 @@ export function RadiationView() {
             <ol className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2" aria-label="Mission timeline">
               {([[1, 'Trans-Mars injection'], [84, 'X8.7 flare: space-weather watch'], [SPE_DAY, 'Solar particle event: shelter'], [157, 'Fever: autonomous triage'], [MISSION_DAYS, 'Mars arrival']] as const).map(([d, t]) => (
                 <li key={d}><button onClick={() => h.setDay(d)} className={`focus-ring flex w-full items-center gap-2 rounded-md py-1 text-left text-[12px] hover:text-ink ${h.day >= d ? 'text-ink-soft' : 'text-ink-mute'}`} data-tl={d}>
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${h.day >= d ? 'bg-teal' : 'border border-white/30'}`} aria-hidden /><span className="num w-9 shrink-0">D{d}</span><span className="truncate">{t}</span></button></li>
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${h.day >= d ? 'bg-teal' : 'border border-white/30'}`} aria-hidden /><span className="num w-9 shrink-0">D{d}</span><span className="break-words">{t}</span></button></li>
               ))}
             </ol>
             <p className="text-[11px] text-ink-mute">Orbit sizes are to scale. The scenario compresses the transfer to {MISSION_DAYS} days, so positions are schematic. Around D{SPE_DAY} the red shell shows the storm sweeping outward.</p>
@@ -175,7 +176,7 @@ export function RadiationView() {
             <ul className="max-h-[260px] space-y-1.5 overflow-y-auto pr-1 scroll-thin">
               {near.map((e) => (
                 <li key={e.id} className="flex items-start justify-between gap-2 rounded-xl border border-white/[0.06] px-3 py-2">
-                  <div className="min-w-0"><div className="text-sm"><span className="num mr-2 text-xs text-ink-mute">D{e.d}</span>{e.title}</div><div className="truncate text-[11px] text-ink-mute">{e.sub}</div></div>
+                  <div className="min-w-0"><div className="text-sm"><span className="num mr-2 text-xs text-ink-mute">D{e.d}</span>{e.title}</div><div className="break-words text-[11px] text-ink-mute">{e.sub}</div></div>
                   <DonkiLink href={e.link} small />
                 </li>
               ))}
@@ -194,31 +195,33 @@ function DonkiLink({ href, small }: { href: string; small?: boolean }) {
 
 function LiveDonki() {
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'fallback'>('idle')
-  const [msg, setMsg] = useState('')
+  const [res, setRes] = useState<DonkiResult | null>(() => lastGood(safeStorage()))
+  const [err, setErr] = useState('')
   const run = async () => {
-    setState('loading')
-    const end = new Date(), start = new Date(Date.now() - 30 * 86400000)
-    const q = `startDate=${start.toISOString().slice(0, 10)}&endDate=${end.toISOString().slice(0, 10)}`
-    const ctl = new AbortController(); const t = window.setTimeout(() => ctl.abort(), 7000)
-    try {
-      const r = await fetch(`https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR?${q}`, { signal: ctl.signal })
-      const ct = r.headers.get('content-type') || ''
-      if (!r.ok || !ct.includes('json')) throw new Error(`HTTP ${r.status}`)
-      const j = await r.json()
-      setState('ok'); setMsg(`Live: ${Array.isArray(j) ? j.length : 0} flares in the last 30 days from ccmc.gsfc.nasa.gov/DONKI-API. The scenario keeps using the cached May 2024 events.`)
-    } catch (e) {
-      setState('fallback'); setMsg(`Live DONKI unavailable here (${(e as Error).name === 'AbortError' ? 'timeout' : 'network/CORS'}). HALO stays on the bundled cache of real events.`)
-    } finally { window.clearTimeout(t) }
+    setState('loading'); setErr('')
+    try { setRes(await fetchDonki({ storage: safeStorage() })); setState('ok') } catch (e) { setErr((e as Error).message); setState('fallback') }
   }
+  const age = res ? Math.max(0, Math.round((Date.now() - Date.parse(res.fetchedAt)) / 60000)) : null
   return (
-    <div className="mt-3 rounded-xl border border-white/[0.07] p-3 text-xs">
-      <div className="flex items-center justify-between gap-2"><span className="text-ink-soft">Default: bundled cache ({DONKI.meta.counts.flr + DONKI.meta.counts.cme + DONKI.meta.counts.sep} real events). Works offline.</span>
-        <button className="btn-ghost px-2.5 py-1 text-xs" onClick={run} disabled={state === 'loading'}><CloudDownload size={13} aria-hidden />{state === 'loading' ? 'Checking…' : 'Try live DONKI'}</button></div>
-      {msg && <div className={`mt-2 ${state === 'ok' ? 'text-ok' : 'text-warn'}`} role="status">{msg}</div>}
-      <div className="mt-1.5"><Prov ids={['donkiMove']} label="API endpoint:" /></div>
+    <div className="mt-3 rounded-xl border border-white/[0.07] p-3 text-xs" data-live-donki>
+      <div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-[200px] flex-1 text-ink-soft">Default: bundled cache ({DONKI.meta.counts.flr + DONKI.meta.counts.cme + DONKI.meta.counts.sep} real events). Works offline.</span>
+        <button className="btn-ghost px-2.5 py-1 text-xs" onClick={run} disabled={state === 'loading'} data-donki-live><CloudDownload size={13} aria-hidden />{state === 'loading' ? 'Contacting NASA…' : res ? 'Refresh live DONKI' : 'Fetch live DONKI'}</button></div>
+      {res && (
+        <div className="mt-2 rounded-lg border border-ok/25 bg-ok/[0.05] p-2.5" role="status">
+          <div className="text-ok">{state === 'ok' ? 'Live from' : 'Last live result from'} {res.source} · last 30 days{age != null && age > 1 ? ` · ${age < 120 ? `${age} min` : `${Math.round(age / 60)} h`} ago` : ''}</div>
+          <div className="num mt-1 text-ink-soft">{res.counts.FLR} flares{res.largestFlare ? ` (largest ${res.largestFlare})` : ''} · {res.counts.CME} CMEs · {res.counts.SEP} particle events</div>
+          {res.events.length > 0 && <ul className="mt-1.5 space-y-0.5 text-ink-mute">{res.events.slice(0, 3).map((e) => <li key={e.id} className="break-words"><span className="num">{e.time.slice(0, 16).replace('T', ' ')}</span> · {e.link ? <a className="text-teal hover:underline" href={e.link} target="_blank" rel="noreferrer">{e.label}</a> : e.label}</li>)}</ul>}
+          <div className="mt-1 text-[11px] text-ink-mute">The story keeps using the May 2024 events so the demo is repeatable.</div>
+        </div>
+      )}
+      {state === 'fallback' && <div className="mt-2 text-warn" role="status">NASA’s live service could not be reached from this page ({err}). HALO stays on the bundled real events, so nothing breaks.</div>}
+      <div className="mt-1.5 text-[11px] text-ink-mute">Two NASA endpoints, retries with backoff, 8 s timeout, strict checks on every record.</div>
+      <div className="mt-1"><Prov ids={['donkiMove']} label="API endpoint:" /></div>
     </div>
   )
 }
+
+const safeStorage = () => { try { return window.localStorage } catch { return null } }
 
 function ShelterMap() {
   return (

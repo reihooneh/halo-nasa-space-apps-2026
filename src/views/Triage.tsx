@@ -61,7 +61,7 @@ export function TriageView() {
                 const hit = t.hits.find((x) => x.id.startsWith(id + '-') || x.id.startsWith(id + 'b-'))
                 return (
                   <li key={id} className={`flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs ${hit ? (hit.level === 'urgent' ? 'border-alert/40 bg-alert/[0.06]' : 'border-warn/40 bg-warn/[0.06]') : 'border-white/[0.06]'}`}>
-                    <span className="num w-6 shrink-0 text-ink-mute">{id}</span><span className="min-w-0 flex-1 truncate text-ink-soft">{name}</span><span className="num shrink-0 text-ink-mute">{val}</span>
+                    <span className="num w-6 shrink-0 text-ink-mute">{id}</span><span className="min-w-0 flex-1 break-words text-ink-soft">{name}</span><span className="num shrink-0 text-ink-mute">{val}</span>
                     <span className={`shrink-0 font-medium ${hit ? (hit.level === 'urgent' ? 'text-alert' : 'text-warn') : 'text-ok'}`}>{hit ? (hit.level === 'self' ? 'self' : hit.level) : 'clear'}</span>
                   </li>
                 )
@@ -104,7 +104,7 @@ function Medkit() {
           const low = m.qty <= 0 ? 'empty' : m.scarceAt > 0 && m.qty <= m.scarceAt ? 'low' : null
           return (
             <li key={m.id} className="flex items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-1.5 text-sm">
-              <span className="min-w-0 flex-1 truncate" title={m.note || m.name}>{m.name}</span>
+              <span className="min-w-0 flex-1 break-words" title={m.note || m.name}>{m.name}</span>
               {low && <span className={`chip px-2 py-0.5 text-[10px] ${low === 'empty' ? 'border-alert/40 text-alert' : 'border-warn/40 text-warn'}`}>{low === 'empty' ? 'Empty' : 'Low'}</span>}
               <button className="btn-ghost px-1.5 py-1" onClick={() => adj(m.id, -1)} aria-label={`Use one ${m.name}`}><Minus size={13} /></button>
               <span className="num w-7 text-center">{m.qty}</span>

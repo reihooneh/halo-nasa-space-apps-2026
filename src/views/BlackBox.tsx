@@ -55,7 +55,7 @@ export function BlackBoxView() {
             return (
               <li key={e.seq}>
                 <button onClick={() => h.setDay(e.day)} className={`focus-ring w-full rounded-xl border px-3 py-2 text-left hover:bg-white/[0.03] ${broken ? 'border-alert/40 bg-alert/[0.05]' : 'border-white/[0.06]'}`}>
-                  <div className="flex flex-wrap items-center gap-2 text-xs"><span className="num text-ink-mute">#{e.seq}</span><span className="num text-ink-mute">D{e.day}</span><span className="chip border-white/10 px-1.5 py-0 text-[10px] uppercase tracking-wide text-ink-soft">{e.type}</span><span className="num ml-auto truncate text-[10px] text-ink-mute" title={e.hash}>{e.hash.slice(0, 16)}…</span></div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs"><span className="num text-ink-mute">#{e.seq}</span><span className="num text-ink-mute">D{e.day}</span><span className="chip border-white/10 px-1.5 py-0 text-[10px] uppercase tracking-wide text-ink-soft">{e.type}</span><span className="num ml-auto break-words text-[10px] text-ink-mute" title={e.hash}>{e.hash.slice(0, 16)}…</span></div>
                   <div className="mt-0.5 text-sm">{e.summary}</div>
                 </button>
               </li>

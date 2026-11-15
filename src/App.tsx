@@ -28,6 +28,7 @@ import { SensorsView } from './views/Sensors'
 import { SolView } from './views/Sol'
 import { ClinicalView } from './views/Clinical'
 import { VoiceButton } from './voice/VoiceButton'
+import { HaloLockup, OrbitalMark } from './ui/Mark'
 
 type NavItem = { id: ViewId; label: string; earth?: string; Icon: typeof Activity; group: string; blurb: string }
 export const GROUPS: Record<string, { n: string; text: string }> = {
@@ -94,7 +95,7 @@ export default function App() {
         <div className="mt-5 flex-1 space-y-4 overflow-y-auto scroll-thin pr-1">
           {groups.map((g) => (
             <div key={g}>
-              <div className="label flex items-baseline gap-1.5 px-2 pb-1.5"><span className="num text-teal/80">{GROUPS[g].n}</span>{g}<span className="ml-auto truncate text-[9.5px] normal-case tracking-normal text-ink-mute">{GROUPS[g].text}</span></div>
+              <div className="label flex items-baseline gap-1.5 px-2 pb-1.5"><span className="num text-teal/80">{GROUPS[g].n}</span>{g}<span className="ml-auto break-words text-[9.5px] normal-case tracking-normal text-ink-mute">{GROUPS[g].text}</span></div>
               <ul className="space-y-0.5">
                 {NAV.filter((n) => n.group === g).map((n) => (
                   <li key={n.id}>
@@ -191,7 +192,7 @@ export default function App() {
         </nav>
 
         <footer className="no-print border-t border-white/[0.06] px-4 py-3 text-[11.5px] text-ink-mute md:px-6">
-          <span className="font-medium text-ink-soft">Powered by NASA data</span> · NASA HRP hazards & risks, NASA-STD-3001, NASA CCMC DONKI space weather, CSA radiation research ·
+          <span className="font-medium text-ink-soft">HALO by Orbital Vitals</span> · NASA Space Apps 2026 · <span className="font-medium text-ink-soft">Powered by NASA data</span> · NASA HRP hazards & risks, NASA-STD-3001, NASA CCMC DONKI space weather, CSA radiation research ·
           <span className="text-warn"> Simulated crew data · Not a medical device · Thresholds from published guidelines (AHA, CDC, ADA, AASM); protocols illustrative</span> · Fictional crew ·
           <span className="hidden md:inline"> Keys: <Kbd>Space</Kbd> play · <Kbd>←</Kbd><Kbd>→</Kbd> day · <Kbd>J</Kbd> judge tour</span>
         </footer>
@@ -209,8 +210,7 @@ function Brand({ compact }: { compact?: boolean }) {
   const h = useHalo()
   return (
     <button onClick={() => h.go('console')} className="focus-ring flex items-center gap-2.5 rounded-xl px-2 text-left" aria-label={compact ? 'HALO home' : undefined}>
-      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden><defs><linearGradient id="lg" x1="0" x2="1"><stop offset="0" stopColor="#2DD4BF" /><stop offset="1" stopColor="#60A5FA" /></linearGradient></defs><circle cx="16" cy="16" r="11" fill="none" stroke="url(#lg)" strokeWidth="3.2" /><circle cx="16" cy="16" r="4" fill="#2DD4BF" opacity=".85" /><circle cx="26.5" cy="9" r="2" fill="#60A5FA" /></svg>
-      {!compact && <div><div className="text-[15px] font-bold tracking-[0.18em] text-ink">HALO</div><div className="text-[10.5px] leading-tight text-ink-mute">Health Autonomy Loop for Orbit</div></div>}
+      <HaloLockup compact={compact} />
     </button>
   )
 }
@@ -289,6 +289,7 @@ function Welcome() {
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-teal/15 blur-3xl" aria-hidden />
         <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-ice/10 blur-3xl" aria-hidden />
         <div className="relative">
+          <div className="mb-4 flex items-center gap-3"><OrbitalMark size={52} small title="Orbital Vitals logo" /><div><div className="text-lg font-bold tracking-[0.2em]">HALO</div><div className="text-xs text-ink-mute">Health Autonomy Loop for Orbit · by Orbital Vitals</div></div></div>
           <div className="label">NASA Space Apps 2026 · Health monitoring for astronauts</div>
           <h1 id="welcome-title" className="mt-2 text-[28px] font-semibold leading-tight tracking-tight md:text-[34px]">When Earth is 20 minutes away, HALO is the crew’s health copilot.</h1>
           <p className="mt-3 text-sm text-ink-soft">Personal baselines, early drift detection, NASA’s five hazards, offline triage, and real NASA space-weather data. Crew data is simulated.</p>
