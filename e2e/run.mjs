@@ -16,7 +16,7 @@ await new Promise((r) => setTimeout(r, 2500))
 const errors = [], fails = []
 let checks = 0
 const ok = (cond, msg) => { checks++; if (!cond) { fails.push(msg); console.log('  ✗', msg) } else console.log('  ✓', msg) }
-const browser = await chromium.launch({ executablePath: exe, args: ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] })
+const browser = await chromium.launch({ executablePath: exe, args: ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })
 let n = 0
 const shot = async (page, name) => page.screenshot({ path: SHOTS + `${String(++n).padStart(2, '0')}-${name}.png` })
 
@@ -87,7 +87,14 @@ try {
   ok(Number(await page.locator('#day').inputValue()) < 10, 'restart story from day 1')
 
   console.log('Body map')
-  await day(57); await nav('body')
+  await day(57); await nav('body'); await page.waitForSelector('[data-body3d] canvas', { timeout: 8000 })
+  ok(await has('[data-body3d] canvas'), '3D body hologram renders (WebGL)')
+  await page.hover('[data-body3d]'); await page.waitForTimeout(500)
+  for (const s of ['brain', 'eyes', 'sensorimotor', 'sleep', 'cardio', 'immune', 'msk']) { await page.click(`[data-system3d="${s}"]`); await page.waitForTimeout(60) }
+  ok(await has('[data-system3d="msk"][aria-pressed="true"]'), '7 labels on the 3D figure select systems')
+  ok(await page.locator('[data-today-systems] li').count() === 7, 'today-by-system table lists 7 systems')
+  await page.click('[data-today-systems] li:nth-child(1) button')
+  await page.click('[role="radio"]:has-text("2D diagram")'); await page.waitForTimeout(200)
   for (const s of ['brain', 'eyes', 'sensorimotor', 'sleep', 'cardio', 'immune', 'msk']) { await page.locator(`[data-system="${s}"] > circle`).last().click(); await page.waitForTimeout(80) }
   for (const s of ['cardio', 'msk', 'brain', 'immune', 'eyes', 'sleep', 'sensorimotor']) { await page.click(`[data-system-btn="${s}"]`); await page.waitForTimeout(80) }
   ok(await has('text=Risk of Altered Sensorimotor'), '7 body glyphs + 7 list buttons select systems')
@@ -150,11 +157,17 @@ try {
   ok(await has('text=With countermeasure'), 'forecast + what-if sliders'); await shot(page, 'forecast')
 
   console.log('Radiation')
-  await day(57); await nav('radiation')
+  await day(57); await nav('radiation'); await page.waitForSelector('[data-orbit3d] canvas', { timeout: 8000 })
+  for (const v of ['follow', 'top', 'overview']) { await page.click(`[data-orbit-view="${v}"]`); await page.waitForTimeout(150) }
+  ok(await has('[data-orbit-view="overview"][aria-checked="true"]'), '3D transfer: overview / follow crew / top-down views')
+  await page.click('[data-tl="157"]'); ok((await page.locator('#day').inputValue()) === '157', 'mission timeline jumps to a day'); await day(57)
   ok(await has('[data-jump-90]'), 'quiet-sun state offers jump'); await page.click('button:has-text("X8.7 flare · D84")'); ok((await page.locator('#day').inputValue()) === '84', 'jump to D84')
   await day(57); await page.click('[data-jump-90]'); ok(await has('text=Solar particle event: shelter protocol'), 'jump to D90 → shelter')
+  await page.waitForSelector('[data-habitat3d] canvas', { timeout: 8000 })
+  ok((await page.locator('[data-in-shelter]').innerText()).startsWith('0/4'), '3D habitat cutaway: 0/4 crew in shelter at the start')
   const boxes = page.locator('[data-tour="shelter"] li button'); const nb = await boxes.count()
   for (let k = 0; k < nb; k++) await boxes.nth(k).click()
+  ok((await page.locator('[data-in-shelter]').innerText()).startsWith('4/4'), 'ticking the checklist moves all 4 crew into the shelter')
   ok((await page.locator('[data-tour="shelter"] li button[aria-pressed="true"]').count()) === nb, `shelter checklist: all ${nb} steps ticked`); await page.click('button:has-text("Read the checklist aloud")')
   ok(await page.locator('a:has-text("NASA CCMC DONKI")').count() >= 3, 'DONKI links on events'); await shot(page, 'radiation-storm')
   await day(57); await page.click('text=Run a shelter drill'); ok(await has('text=Shelter drill'), 'shelter drill'); await page.click('text=End drill')
@@ -162,6 +175,7 @@ try {
 
   console.log('Triage + medkit')
   await day(157); await nav('triage')
+  ok(await page.locator('[data-rules-checked] li').count() === 9 && await has('[data-rules-checked] li:has-text("urgent")'), 'triage lists all 9 rules checked with status')
   ok(await has('text=Fever with raised heart rate') && await has('text=HALO runs the protocol now'), 'autonomous fever triage on D157')
   const steps = page.locator('[data-tour="triage"] ol ol button'); const ns = await steps.count()
   for (let k = 0; k < ns; k++) await steps.nth(k).click()
@@ -200,7 +214,7 @@ try {
   await nav('crew'); const cons = page.locator('[data-tour="crew"] input[type="checkbox"]')
   for (let k = 0; k < await cons.count(); k++) { await cons.nth(k).click(); await cons.nth(k).click() }
   ok(await cons.count() === 4, 'consent toggles (4 crew)')
-  await nav('lab'); await page.fill('input[type="number"]', '11'); await page.click('button:has-text("Run 1,000 missions")'); await page.waitForTimeout(2000)
+  await nav('lab'); await page.fill('input[type="number"]', '11'); await page.click('button:has-text("Run 1,000 missions")'); await page.waitForTimeout(2000); ok(await has('[data-lab-summary]'), 'simulation lab plain-language result')
   ok(await has('text=True declines detected · HALO'), 'simulation lab reruns with new seed')
   await nav('blackbox'); ok(await has('text=Chain intact'), 'black box intact')
   await page.fill('#bbq', 'sleep'); ok(await page.locator('[data-tour="blackbox"] ~ * li').count() > 0 || true, 'black box search')

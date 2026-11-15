@@ -1,54 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bluetooth, BluetoothOff, Camera, CameraOff, Lock, Square } from 'lucide-react'
+import { BatteryMedium, Bluetooth, BluetoothOff, Camera, CameraOff, Lock, RefreshCw, Square, TriangleAlert } from 'lucide-react'
 import { useHalo } from '../state/store'
 import { Illustrative, Panel, Prov } from '../ui/kit'
 import { gauss, mulberry32 } from '../sim/prng'
 import { blandAltman, type Pair } from '../engine/agreement'
+import { detrend, estimatePulse, estimatePulse1, parseHrmFull, rmssdClean, type PulseEstimate } from '../engine/rppg'
 
-/* ---------- Signal processing (pure, unit-testable) ---------- */
+/* ---------- Signal processing lives in engine/rppg.ts (pure, unit-tested); thin wrappers kept for compatibility ---------- */
 
-/** Estimate pulse (bpm) from a camera colour trace using a direct DFT on (possibly irregular) samples, 0.75–3 Hz band. */
 export function estimateBpm(t: number[], v: number[]): { bpm: number | null; quality: number } {
-  const n = Math.min(t.length, v.length)
-  if (n < 60) return { bpm: null, quality: 0 }
-  const dur = (t[n - 1] - t[0]) / 1000
-  if (dur < 6) return { bpm: null, quality: 0 }
-  // detrend: subtract a ~1 s moving average, then normalise
-  const out: number[] = []
-  for (let i = 0; i < n; i++) {
-    let s = 0, c = 0
-    for (let j = i; j >= 0 && t[i] - t[j] <= 500; j--) { s += v[j]; c++ }
-    for (let j = i + 1; j < n && t[j] - t[i] <= 500; j++) { s += v[j]; c++ }
-    out.push(v[i] - s / c)
-  }
-  const mean = out.reduce((a, b) => a + b, 0) / n
-  const sd = Math.sqrt(out.reduce((a, b) => a + (b - mean) ** 2, 0) / n) || 1
-  const x = out.map((y) => (y - mean) / sd)
-  let best = 0, bestF = 0, total = 0
-  for (let f = 0.75; f <= 3.0; f += 0.01) {
-    let re = 0, im = 0
-    for (let i = 0; i < n; i++) { const ph = 2 * Math.PI * f * ((t[i] - t[0]) / 1000); re += x[i] * Math.cos(ph); im += x[i] * Math.sin(ph) }
-    const p = re * re + im * im
-    total += p
-    if (p > best) { best = p; bestF = f }
-  }
-  const quality = total ? best / total : 0
-  return { bpm: Math.round(bestF * 60), quality: Math.min(1, quality * 12) }
+  const e = estimatePulse1(t, v)
+  return { bpm: e.bpm, quality: e.quality }
 }
-
-/** Parse a Bluetooth GATT Heart Rate Measurement (0x2A37) value. */
-export function parseHrm(dv: DataView): { hr: number; rr: number[] } {
-  const flags = dv.getUint8(0)
-  const wide = flags & 0x01
-  let o = 1
-  const hr = wide ? dv.getUint16(o, true) : dv.getUint8(o)
-  o += wide ? 2 : 1
-  if (flags & 0x08) o += 2 // energy expended
-  const rr: number[] = []
-  if (flags & 0x10) for (; o + 1 < dv.byteLength; o += 2) rr.push((dv.getUint16(o, true) / 1024) * 1000)
-  return { hr, rr }
-}
-
+export function parseHrm(dv: DataView): { hr: number; rr: number[] } { const p = parseHrmFull(dv); return { hr: p.hr, rr: p.rr } }
 export function rmssd(rr: number[]): number | null {
   if (rr.length < 3) return null
   let s = 0
@@ -170,11 +134,31 @@ function Validation() {
   )
 }
 
-function Trace({ data, color = '#2DD4BF' }: { data: number[]; color?: string }) {
-  if (data.length < 2) return <div className="h-14 rounded-xl bg-white/[0.02]" aria-hidden />
+function Trace({ data, color = '#2DD4BF', label }: { data: number[]; color?: string; label?: string }) {
+  if (data.length < 2) return <div className="flex h-16 items-center justify-center rounded-xl border border-dashed border-white/[0.07] text-[11px] text-ink-mute" aria-hidden>{label ?? 'Waiting for signal'}</div>
   const lo = Math.min(...data), hi = Math.max(...data)
-  const d = data.map((v, i) => `${i ? 'L' : 'M'}${((i / (data.length - 1)) * 300).toFixed(1)},${(52 - ((v - lo) / (hi - lo || 1)) * 46).toFixed(1)}`).join('')
-  return <svg viewBox="0 0 300 56" className="h-14 w-full" preserveAspectRatio="none" aria-hidden><path d={d} fill="none" stroke={color} strokeWidth="1.6" vectorEffect="non-scaling-stroke" /></svg>
+  const d = data.map((v, i) => `${i ? 'L' : 'M'}${((i / (data.length - 1)) * 300).toFixed(1)},${(58 - ((v - lo) / (hi - lo || 1)) * 52).toFixed(1)}`).join('')
+  return (
+    <svg viewBox="0 0 300 64" className="h-16 w-full rounded-xl bg-space-950/50" preserveAspectRatio="none" aria-hidden>
+      {[16, 32, 48].map((y) => <line key={y} x1="0" x2="300" y1={y} y2={y} stroke="#fff" strokeOpacity="0.04" />)}
+      <path d={`${d} L300,64 L0,64 Z`} fill={color} fillOpacity="0.08" />
+      <path d={d} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
+
+const MEASURE_S = 20, SETTLE_MS = 1500
+type CamState = 'idle' | 'starting' | 'live' | 'sim' | 'done' | 'error'
+const EMPTY: PulseEstimate = { bpm: null, quality: 0, snrDb: null, fps: 0 }
+
+/** Why the camera can't run here, or null if it can be tried. */
+function cameraBlocker(): string | null {
+  if (typeof window === 'undefined') return 'No browser.'
+  if (!window.isSecureContext) return 'The camera needs a secure (HTTPS) page. Open the public link instead of a file.'
+  const fp = (document as unknown as { featurePolicy?: { allowsFeature: (f: string) => boolean } }).featurePolicy
+  if (fp && !fp.allowsFeature('camera')) return 'This embedded page is not allowed to use the camera. Open HALO in its own tab (public link).'
+  if (!navigator.mediaDevices?.getUserMedia) return 'This browser has no camera API.'
+  return null
 }
 
 function CameraPulse() {
@@ -182,166 +166,282 @@ function CameraPulse() {
   const video = useRef<HTMLVideoElement>(null)
   const canvas = useRef<HTMLCanvasElement | null>(null)
   const stream = useRef<MediaStream | null>(null)
-  const raf = useRef<number | null>(null)
-  const ts = useRef<number[]>([]), gs = useRef<number[]>([])
-  const [state, setState] = useState<'idle' | 'starting' | 'live' | 'sim' | 'done' | 'error'>('idle')
+  const frameHandle = useRef<number | null>(null), tick = useRef<number | null>(null), simIv = useRef<number | null>(null)
+  const run = useRef(0)
+  const T = useRef<number[]>([]), R = useRef<number[]>([]), G = useRef<number[]>([]), B = useRef<number[]>([])
+  const lumaJumps = useRef<number[]>([])
+  const [state, setState] = useState<CamState>('idle')
   const [err, setErr] = useState('')
   const [trace, setTrace] = useState<number[]>([])
-  const [est, setEst] = useState<{ bpm: number | null; quality: number }>({ bpm: null, quality: 0 })
-  const [left, setLeft] = useState(20)
-  const stop = () => {
-    if (raf.current) cancelAnimationFrame(raf.current)
+  const [est, setEst] = useState<PulseEstimate>(EMPTY)
+  const [left, setLeft] = useState(MEASURE_S)
+  const [hint, setHint] = useState<string | null>(null)
+
+  const release = () => {
+    run.current++
+    if (tick.current) window.clearInterval(tick.current)
+    if (simIv.current) window.clearInterval(simIv.current)
+    const v = video.current as (HTMLVideoElement & { cancelVideoFrameCallback?: (h: number) => void }) | null
+    if (frameHandle.current != null) { v?.cancelVideoFrameCallback?.(frameHandle.current); cancelAnimationFrame(frameHandle.current) }
+    tick.current = simIv.current = frameHandle.current = null
     stream.current?.getTracks().forEach((t) => t.stop())
     stream.current = null
+    if (video.current) video.current.srcObject = null
   }
-  useEffect(() => stop, [])
-  const loop = (start: number, sim: boolean) => {
-    const r = mulberry32(42)
-    const step = () => {
-      const now = performance.now()
-      let g: number | null = null
-      if (sim) {
-        const tt = (now - start) / 1000
-        g = 120 + 0.6 * Math.sin(2 * Math.PI * (64 / 60) * tt) + 0.25 * Math.sin(2 * Math.PI * 0.2 * tt) + gauss(r) * 0.25
-      } else if (video.current && video.current.readyState >= 2) {
-        const c = (canvas.current ??= document.createElement('canvas'))
-        c.width = 64; c.height = 48
-        const ctx = c.getContext('2d', { willReadFrequently: true })
-        if (ctx) {
-          ctx.drawImage(video.current, 0, 0, 64, 48)
-          const px = ctx.getImageData(22, 6, 20, 10).data // forehead region of interest
-          let sum = 0
-          for (let i = 1; i < px.length; i += 4) sum += px[i]
-          g = sum / (px.length / 4)
-        }
+  useEffect(() => release, [])
+  const reset = () => { T.current = []; R.current = []; G.current = []; B.current = []; lumaJumps.current = []; setTrace([]); setEst(EMPTY); setErr(''); setHint(null); setLeft(MEASURE_S) }
+
+  const push = (now: number, r: number, g: number, b: number) => {
+    const n = T.current.length
+    if (n) { const prev = 0.299 * R.current[n - 1] + 0.587 * G.current[n - 1] + 0.114 * B.current[n - 1], cur = 0.299 * r + 0.587 * g + 0.114 * b; lumaJumps.current.push(Math.abs(cur - prev) / (prev || 1)); if (lumaJumps.current.length > 45) lumaJumps.current.shift() }
+    T.current.push(now); R.current.push(r); G.current.push(g); B.current.push(b)
+  }
+  /** Mean R,G,B over the face box (centre-cropped so the box matches the on-screen guide). */
+  const sampleVideo = () => {
+    const v = video.current
+    if (!v || v.readyState < 2 || !v.videoWidth) return
+    const c = (canvas.current ??= document.createElement('canvas'))
+    c.width = 64; c.height = 48
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return
+    const ar = v.videoWidth / v.videoHeight, want = 4 / 3
+    const sw = ar > want ? v.videoHeight * want : v.videoWidth, sh = ar > want ? v.videoHeight : v.videoWidth / want
+    ctx.drawImage(v, (v.videoWidth - sw) / 2, (v.videoHeight - sh) / 2, sw, sh, 0, 0, 64, 48)
+    const px = ctx.getImageData(20, 6, 24, 24).data
+    let r = 0, g = 0, b = 0
+    for (let i = 0; i < px.length; i += 4) { r += px[i]; g += px[i + 1]; b += px[i + 2] }
+    const n = px.length / 4
+    push(performance.now(), r / n, g / n, b / n)
+  }
+  const finish = (id: number) => {
+    if (run.current !== id) return
+    const fin = estimatePulse(T.current, R.current, G.current, B.current, SETTLE_MS)
+    release(); setEst(fin); setLeft(0)
+    if (fin.bpm == null) { setState('error'); setErr(fin.fps < 8 ? 'The camera delivered too few frames (keep this tab visible while measuring).' : 'No stable pulse signal was found.'); return }
+    emit('camera', fin.bpm); setState('done')
+  }
+  const begin = (sim: boolean) => {
+    const id = ++run.current
+    const start = performance.now()
+    tick.current = window.setInterval(() => {
+      if (run.current !== id) return
+      const el = (performance.now() - start) / 1000
+      setLeft(Math.max(0, Math.ceil(MEASURE_S - el)))
+      const n = T.current.length
+      if (n > 20) {
+        setTrace(detrend(G.current.slice(-180), 30).slice(8, -8))
+        const k = n - 1, luma = 0.299 * R.current[k] + 0.587 * G.current[k] + 0.114 * B.current[k]
+        const moving = lumaJumps.current.filter((j) => j > 0.02).length > lumaJumps.current.length * 0.2
+        setHint(sim ? null : luma < 45 ? 'Too dark: face a light or a window.' : luma > 238 ? 'Too bright: move out of direct light.' : moving ? 'Hold still and keep your face inside the box.' : null)
       }
-      if (g != null) { ts.current.push(now); gs.current.push(g) }
-      const el = (now - start) / 1000
-      setLeft(Math.max(0, Math.ceil(20 - el)))
-      if (ts.current.length % 10 === 0) {
-        setTrace(gs.current.slice(-150))
-        if (el > 7) {
-          const cut = now - 10000
-          const k0 = Math.max(0, ts.current.findIndex((x) => x >= cut))
-          setEst(estimateBpm(ts.current.slice(k0), gs.current.slice(k0)))
-        }
+      if (el > 8 && Math.round(el * 4) % 4 === 0) {
+        const cut = performance.now() - 12000, k0 = Math.max(0, T.current.findIndex((x) => x >= cut))
+        const e = estimatePulse(T.current.slice(k0), R.current.slice(k0), G.current.slice(k0), B.current.slice(k0))
+        if (e.bpm != null) setEst(e)
       }
-      if (el >= 20) { const fin = estimateBpm(ts.current, gs.current); setEst(fin); if (fin.bpm != null) emit('camera', fin.bpm); stop(); setState('done'); return }
-      raf.current = requestAnimationFrame(step)
+      if (el >= MEASURE_S) finish(id)
+    }, 250)
+    if (sim) {
+      const rnd = mulberry32(42)
+      simIv.current = window.setInterval(() => {
+        const now = performance.now(), s = (now - start) / 1000
+        const p = Math.sin(2 * Math.PI * (64 / 60) * s) + 0.3 * Math.sin(4 * Math.PI * (64 / 60) * s), light = 1 + 0.03 * Math.sin(2 * Math.PI * 0.12 * s)
+        push(now, 200 * light * (1 + 0.0020 * p + gauss(rnd) * 0.0012), 150 * light * (1 + 0.0046 * p + gauss(rnd) * 0.0012), 120 * light * (1 + 0.0032 * p + gauss(rnd) * 0.0012))
+      }, 33)
+      return
     }
-    raf.current = requestAnimationFrame(step)
+    const v = video.current as (HTMLVideoElement & { requestVideoFrameCallback?: (cb: () => void) => number }) | null
+    const onFrame = () => {
+      if (run.current !== id) return
+      sampleVideo()
+      frameHandle.current = v?.requestVideoFrameCallback ? v.requestVideoFrameCallback(onFrame) : requestAnimationFrame(onFrame)
+    }
+    onFrame()
   }
   const startCam = async () => {
-    ts.current = []; gs.current = []; setTrace([]); setEst({ bpm: null, quality: 0 }); setErr('')
-    if (!navigator.mediaDevices?.getUserMedia) { setState('error'); setErr('No camera API in this browser or page (needs HTTPS and camera permission).'); return }
+    release(); reset()
+    const block = cameraBlocker()
+    if (block) { setState('error'); setErr(block); return }
     setState('starting')
+    const id = run.current
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 }, audio: false })
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }, audio: false })
+      if (run.current !== id) { s.getTracks().forEach((t) => t.stop()); return }
       stream.current = s
+      s.getVideoTracks()[0]?.addEventListener('ended', () => { if (stream.current === s) { release(); setState('error'); setErr('The camera was disconnected or taken by another app.') } })
       if (video.current) { video.current.srcObject = s; await video.current.play().catch(() => {}) }
-      setState('live'); loop(performance.now(), false)
+      setState('live'); begin(false)
     } catch (e) {
-      setState('error'); setErr((e as Error).name === 'NotAllowedError' ? 'Camera permission was declined or blocked by this page.' : 'No camera available here.')
+      const name = (e as Error).name
+      setState('error')
+      setErr(name === 'NotAllowedError' || name === 'SecurityError' ? 'Camera permission was declined or is blocked for this page. Allow the camera in the address bar and retry.'
+        : name === 'NotFoundError' || name === 'OverconstrainedError' ? 'No camera was found on this device.'
+        : name === 'NotReadableError' ? 'The camera is in use by another app. Close it and retry.' : 'The camera could not be started here.')
     }
   }
-  const startSim = () => { ts.current = []; gs.current = []; setTrace([]); setEst({ bpm: null, quality: 0 }); setState('sim'); loop(performance.now(), true) }
-  const q = est.quality
+  const startSim = () => { release(); reset(); setState('sim'); begin(true) }
+  const stopNow = () => { release(); setState(est.bpm != null ? 'done' : 'idle') }
+  const q = est.quality, busy = state === 'live' || state === 'sim'
+  const qLabel = est.bpm == null ? '—' : q > 0.55 ? 'good' : q > 0.25 ? 'fair' : 'low'
+  const canLog = state === 'done' && est.bpm != null && q > 0.2
   return (
-    <Panel title="Camera pulse estimate" kicker="Contact-free · demo-grade" right={<><Illustrative text="Demo-grade estimate, not clinical" /><span className="chip border-white/10 text-ink-mute"><Lock size={11} /> On-device</span></>}>
-      <p className="text-xs text-ink-soft">Remote photoplethysmography: each heartbeat slightly changes skin colour. HALO averages the green channel over your forehead and finds the dominant rhythm between 45 and 180 bpm. Frames are processed in memory and never stored or sent.</p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-[180px_1fr]">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-space-950">
+    <Panel title="Camera pulse estimate" kicker="Contact-free · on-device" right={<><Illustrative text="Demo-grade estimate, not clinical" /><span className="chip border-white/10 text-ink-mute"><Lock size={11} /> On-device</span></>}>
+      <p className="text-xs text-ink-soft">Each heartbeat slightly changes skin colour. HALO tracks red, green and blue over your face and combines them with the POS method, which cancels most light and motion changes, then finds the rhythm between 42 and 210 bpm. Frames stay in memory and are never stored or sent.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-[200px_1fr]">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-space-950" data-cam-state={state}>
           <video ref={video} className={`h-full w-full scale-x-[-1] object-cover ${state === 'live' ? '' : 'hidden'}`} muted playsInline aria-label="Camera preview" />
-          {state === 'live' && <div className="absolute left-[34%] top-[12%] h-[21%] w-[32%] rounded-lg border-2 border-teal/80" aria-hidden />}
-          {state !== 'live' && <div className="flex h-full items-center justify-center text-ink-mute">{state === 'sim' ? <span className="text-xs">Simulated signal</span> : <Camera size={28} aria-hidden />}</div>}
+          {state === 'live' && <><div className="absolute left-[31%] top-[12%] h-[50%] w-[38%] rounded-[40%] border-2 border-teal/90 shadow-[0_0_0_999px_rgba(7,11,22,0.35)]" aria-hidden /><span className="absolute bottom-1.5 left-0 right-0 text-center text-[10px] text-ink">Fit your face in the oval</span></>}
+          {state !== 'live' && <div className="flex h-full flex-col items-center justify-center gap-1 text-ink-mute">{state === 'sim' ? <><span className="h-10 w-10 animate-pulse rounded-full bg-teal/20 ring-2 ring-teal/40" /><span className="text-xs">Simulated 64 bpm signal</span></> : state === 'starting' ? <span className="text-xs">Starting camera…</span> : <Camera size={28} aria-hidden />}</div>}
+          {busy && <div className="absolute inset-x-0 top-0 h-1 bg-white/10"><div className="h-full bg-teal transition-[width] duration-300" style={{ width: `${((MEASURE_S - left) / MEASURE_S) * 100}%` }} /></div>}
         </div>
         <div className="min-w-0">
-          <div className="flex items-baseline gap-2"><span className="num text-4xl font-semibold">{est.bpm ?? '—'}</span><span className="text-sm text-ink-mute">bpm</span>
-            {(state === 'live' || state === 'sim') && <span className="num ml-auto text-xs text-ink-mute">{left}s</span>}</div>
-          <div className="mt-1 text-xs"><span className="text-ink-mute">Signal quality </span><span className={q > 0.5 ? 'text-ok' : q > 0.25 ? 'text-warn' : 'text-alert'}>{est.bpm == null ? '—' : q > 0.5 ? 'good' : q > 0.25 ? 'fair' : 'low: keep still, face the light'}</span></div>
-          <div className="mt-2"><Trace data={trace} /></div>
+          <div className="flex items-baseline gap-2"><span className="num text-4xl font-semibold" data-cam-bpm>{est.bpm ?? '—'}</span><span className="text-sm text-ink-mute">bpm</span>
+            {busy && <span className="num ml-auto rounded-md bg-white/[0.05] px-1.5 py-0.5 text-xs text-ink-soft">{left}s left</span>}</div>
+          <div className="mt-1.5 flex items-center gap-2 text-xs">
+            <span className="text-ink-mute">Signal</span>
+            <span className="h-1.5 w-20 overflow-hidden rounded-full bg-white/10" aria-hidden><span className="block h-full rounded-full transition-all" style={{ width: `${Math.round(q * 100)}%`, background: q > 0.55 ? '#34D399' : q > 0.25 ? '#F59E0B' : '#F43F5E' }} /></span>
+            <span className={q > 0.55 ? 'text-ok' : q > 0.25 ? 'text-warn' : est.bpm == null ? 'text-ink-mute' : 'text-alert'} data-cam-quality>{qLabel}</span>
+            {est.snrDb != null && <span className="num text-ink-mute">{est.snrDb.toFixed(1)} dB · {est.fps.toFixed(0)} fps</span>}
+          </div>
+          <div className="mt-2"><Trace data={trace} label={busy ? 'Collecting…' : 'Pulse wave appears here'} /></div>
+          {hint && busy && <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-warn" role="status"><TriangleAlert size={12} aria-hidden />{hint}</div>}
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {state === 'live' || state === 'sim' || state === 'starting'
-          ? <button className="btn-ghost" onClick={() => { stop(); setState('done') }}><Square size={14} aria-hidden /> Stop</button>
-          : <button className="btn-primary" onClick={startCam} data-cam><Camera size={15} aria-hidden /> Measure with camera (20 s)</button>}
-        {state !== 'live' && state !== 'sim' && <button className="btn-ghost" onClick={startSim} data-cam-sim>Run with simulated signal</button>}
-        {state === 'done' && est.bpm != null && <button className="btn-ghost" onClick={() => { h.logValue('hr', est.bpm!); h.pushToast('Heart rate logged', `${est.bpm} bpm from camera estimate (demo-grade).`, 'ok') }}>Log as resting HR</button>}
+        {busy || state === 'starting'
+          ? <button className="btn-ghost" onClick={stopNow}><Square size={14} aria-hidden /> Stop</button>
+          : <button className="btn-primary" onClick={startCam} data-cam><Camera size={15} aria-hidden /> {state === 'done' || state === 'error' ? 'Measure again' : `Measure with camera (${MEASURE_S} s)`}</button>}
+        {!busy && state !== 'starting' && <button className="btn-ghost" onClick={startSim} data-cam-sim>Run with simulated signal</button>}
+        {canLog && <button className="btn-ghost" onClick={() => { h.logValue('hr', est.bpm!); h.pushToast('Heart rate logged', `${est.bpm} bpm from camera estimate (demo-grade).`, 'ok') }}>Log as resting HR</button>}
       </div>
-      {state === 'error' && <div className="mt-2 flex items-start gap-2 rounded-xl border border-warn/30 bg-warn/[0.06] p-2.5 text-xs text-ink-soft" role="status"><CameraOff size={14} className="mt-0.5 shrink-0 text-warn" aria-hidden />{err} You can run the same algorithm on a simulated signal instead.</div>}
-      <div className="mt-2 text-[11px] text-ink-mute">Accuracy depends on light, motion and skin tone; always confirm with a cuff or strap.</div>
+      {state === 'done' && est.bpm != null && !canLog && <div className="mt-2 rounded-xl border border-warn/30 bg-warn/[0.06] p-2.5 text-xs text-ink-soft" role="status">Signal too weak to trust, so HALO won’t log it. Try again in brighter, even light and hold still.</div>}
+      {state === 'error' && <div className="mt-2 flex items-start gap-2 rounded-xl border border-warn/30 bg-warn/[0.06] p-2.5 text-xs text-ink-soft" role="status" data-cam-error><CameraOff size={14} className="mt-0.5 shrink-0 text-warn" aria-hidden /><span>{err} You can run the same algorithm on a simulated signal instead.</span></div>}
+      <ol className="mt-3 grid gap-1.5 text-[11px] text-ink-mute sm:grid-cols-3">{['Sit still, face a light or window', 'Fit your face in the oval', 'Wait 20 s, then confirm with a strap or cuff'].map((x, i) => <li key={x} className="flex items-center gap-1.5 rounded-lg border border-white/[0.05] px-2 py-1.5"><span className="num flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[9px] text-ink-soft">{i + 1}</span>{x}</li>)}</ol>
     </Panel>
   )
 }
 
+type BleState = 'idle' | 'connecting' | 'live' | 'reconnecting' | 'sim' | 'error'
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function BleStrap() {
   const h = useHalo()
-  const [state, setState] = useState<'idle' | 'connecting' | 'live' | 'sim' | 'error'>('idle')
+  const [state, setState] = useState<BleState>('idle')
   const [err, setErr] = useState('')
   const [name, setName] = useState('')
   const [hrs, setHrs] = useState<number[]>([])
   const [rrs, setRrs] = useState<number[]>([])
-  const dev = useRef<any>(null), iv = useRef<number | null>(null)
+  const [battery, setBattery] = useState<number | null>(null)
+  const [contact, setContact] = useState<'ok' | 'lost' | 'unsupported'>('unsupported')
+  const [stale, setStale] = useState(false)
+  const dev = useRef<any>(null), chr = useRef<any>(null), iv = useRef<number | null>(null), dog = useRef<number | null>(null)
+  const lastPkt = useRef(0), userClosed = useRef(false), alive = useRef(true)
   const supported = typeof navigator !== 'undefined' && !!(navigator as any).bluetooth
-  const push = (hr: number, rr: number[]) => { setHrs((a) => [...a, hr].slice(-90)); if (rr.length) setRrs((a) => [...a, ...rr].slice(-120)) }
-  const disconnect = () => {
-    if (iv.current) window.clearInterval(iv.current)
-    try { dev.current?.gatt?.disconnect() } catch { /* ignore */ }
-    dev.current = null; setState('idle')
+  const push = (hr: number, rr: number[]) => {
+    lastPkt.current = performance.now(); setStale(false)
+    if (hr >= 25 && hr <= 250) setHrs((a) => [...a, hr].slice(-120))
+    if (rr.length) setRrs((a) => [...a, ...rr].slice(-180))
   }
-  useEffect(() => () => { if (iv.current) window.clearInterval(iv.current); try { dev.current?.gatt?.disconnect() } catch { /* ignore */ } }, [])
+  const onValue = (e: any) => { const p = parseHrmFull(e.target.value as DataView); setContact(p.contact); if (p.contact !== 'lost') push(p.hr, p.rr) }
+  const onGone = () => { if (!userClosed.current && alive.current) void reconnect() }
+  const teardown = () => {
+    if (iv.current) window.clearInterval(iv.current)
+    if (dog.current) window.clearInterval(dog.current)
+    iv.current = dog.current = null
+    try { chr.current?.removeEventListener('characteristicvaluechanged', onValue) } catch { /* ignore */ }
+    try { dev.current?.removeEventListener('gattserverdisconnected', onGone) } catch { /* ignore */ }
+    try { dev.current?.gatt?.disconnect() } catch { /* ignore */ }
+    chr.current = null
+  }
+  useEffect(() => { alive.current = true; return () => { alive.current = false; userClosed.current = true; teardown() } }, [])
+  const subscribe = async (d: any) => {
+    const server = await d.gatt.connect()
+    const svc = await server.getPrimaryService('heart_rate')
+    const ch = await svc.getCharacteristic('heart_rate_measurement')
+    ch.addEventListener('characteristicvaluechanged', onValue)
+    await ch.startNotifications()
+    chr.current = ch
+    try { const bs = await server.getPrimaryService('battery_service'); const bc = await bs.getCharacteristic('battery_level'); const v = await bc.readValue(); if (alive.current) setBattery(v.getUint8(0)) } catch { /* battery service is optional */ }
+  }
+  const watchdog = () => {
+    if (dog.current) window.clearInterval(dog.current)
+    lastPkt.current = performance.now()
+    dog.current = window.setInterval(() => setStale(performance.now() - lastPkt.current > 5000), 1000)
+  }
+  async function reconnect() {
+    const d = dev.current
+    if (!d) return
+    setState('reconnecting')
+    for (const wait of [800, 1600, 3200]) {
+      await new Promise((r) => setTimeout(r, wait))
+      if (userClosed.current || !alive.current) return
+      try { await subscribe(d); if (alive.current) { setState('live'); watchdog() } return } catch { /* try again */ }
+    }
+    if (alive.current) { teardown(); dev.current = null; setState('error'); setErr('The strap disconnected and did not come back. Check it is on and in range, then reconnect.') }
+  }
+  const disconnect = () => { userClosed.current = true; teardown(); dev.current = null; setState('idle'); setStale(false) }
+  const clear = () => { setErr(''); setHrs([]); setRrs([]); setBattery(null); setContact('unsupported'); setStale(false) }
   const connect = async () => {
-    setErr(''); setHrs([]); setRrs([])
-    if (!supported) { setState('error'); setErr('Web Bluetooth is not available in this browser or page (use Chrome or Edge over HTTPS).'); return }
+    teardown(); clear(); userClosed.current = false
+    if (!window.isSecureContext) { setState('error'); setErr('Bluetooth needs a secure (HTTPS) page. Open the public link instead of a file.'); return }
+    if (!supported) { setState('error'); setErr('Web Bluetooth is not available in this browser or page (use Chrome or Edge on desktop or Android).'); return }
     setState('connecting')
     try {
-      const d = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] })
+      const d = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }], optionalServices: ['battery_service'] })
       dev.current = d; setName(d.name || 'Heart-rate strap')
-      const server = await d.gatt.connect()
-      const svc = await server.getPrimaryService('heart_rate')
-      const ch = await svc.getCharacteristic('heart_rate_measurement')
-      await ch.startNotifications()
-      ch.addEventListener('characteristicvaluechanged', (e: any) => { const r = parseHrm(e.target.value as DataView); push(r.hr, r.rr) })
-      d.addEventListener('gattserverdisconnected', () => setState('idle'))
-      setState('live')
+      d.addEventListener('gattserverdisconnected', onGone)
+      await subscribe(d)
+      if (!alive.current) return
+      setState('live'); watchdog()
     } catch (e) {
-      setState('error'); setErr((e as Error).name === 'NotFoundError' ? 'No strap selected.' : 'Could not connect (Bluetooth blocked here or strap not in range).')
+      const n = (e as Error).name
+      teardown(); dev.current = null; setState('error')
+      setErr(n === 'NotFoundError' ? 'No strap selected.' : n === 'SecurityError' || n === 'NotAllowedError' ? 'Bluetooth is blocked for this page. Open HALO in its own tab and allow Bluetooth.' : 'Could not connect (strap out of range, asleep, or paired to another device). Wet the electrodes, wear it, and retry.')
     }
   }
   const simulate = () => {
-    setErr(''); setHrs([]); setRrs([]); setName('Simulated strap'); setState('sim')
+    teardown(); clear(); userClosed.current = true; setName('Simulated strap'); setState('sim'); setBattery(null)
     const r = mulberry32(7); let k = 0
     iv.current = window.setInterval(() => {
       k++
       const base = 60 + 3 * Math.sin(k / 9)
-      const rr = Array.from({ length: 1 }, () => 60000 / base + gauss(r) * 25)
-      push(Math.round(base + gauss(r) * 0.8), rr)
+      push(Math.round(base + gauss(r) * 0.8), [60000 / base + gauss(r) * 25])
     }, 1000)
   }
+  const on = state === 'live' || state === 'sim' || state === 'reconnecting'
   const cur = hrs.at(-1)
-  const sorted = [...hrs].sort((a, b) => a - b)
+  const recent = hrs.slice(-60), sorted = [...recent].sort((a, b) => a - b)
   const med = sorted.length ? sorted[Math.floor(sorted.length / 2)] : null
   useEffect(() => { if (med != null && hrs.length >= 10 && hrs.length % 10 === 0) emit('strap', med) }, [med, hrs.length])
-  const hrv = rmssd(rrs)
+  const hrv = rmssdClean(rrs)
+  const Stat = ({ k, v, u, attr }: { k: string; v: string | number; u: string; attr: string }) => (
+    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3"><div className="label">{k}</div><div className="num mt-1 text-3xl font-semibold" {...{ [attr]: '' }}>{v}</div><div className="text-[11px] text-ink-mute">{u}</div></div>
+  )
   return (
-    <Panel title="Bluetooth heart-rate strap" kicker="Standard GATT Heart Rate service" right={<Prov ids={['hrpRisks']} />}>
-      <p className="text-xs text-ink-soft">Pairs with any chest strap or watch that broadcasts the standard Bluetooth Heart Rate service. HALO reads beats and beat-to-beat (RR) intervals to give live heart rate and HRV (RMSSD).</p>
+    <Panel title="Bluetooth heart-rate strap" kicker="Standard GATT Heart Rate service (0x180D)" right={<span className={`chip ${state === 'live' ? 'border-ok/40 text-ok' : state === 'reconnecting' ? 'border-warn/40 text-warn' : 'border-white/10 text-ink-mute'}`} data-ble-state={state}><Bluetooth size={11} aria-hidden />{state === 'live' ? 'Connected' : state === 'reconnecting' ? 'Reconnecting…' : state === 'sim' ? 'Simulated' : state === 'connecting' ? 'Pairing…' : 'Not connected'}</span>}>
+      <p className="text-xs text-ink-soft">Pairs with any chest strap or watch that broadcasts the standard Bluetooth Heart Rate service (Polar, Garmin, Wahoo, Coospo and others). HALO reads heart rate and beat-to-beat (RR) intervals, filters out dropped beats, and reconnects by itself if the link drops.</p>
       <div className="mt-3 grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-white/[0.07] p-3"><div className="label">Live HR</div><div className="num mt-1 text-3xl font-semibold">{cur ?? '—'}</div><div className="text-[11px] text-ink-mute">bpm</div></div>
-        <div className="rounded-2xl border border-white/[0.07] p-3"><div className="label">Median</div><div className="num mt-1 text-3xl font-semibold">{med ?? '—'}</div><div className="text-[11px] text-ink-mute">bpm · {hrs.length} s</div></div>
-        <div className="rounded-2xl border border-white/[0.07] p-3"><div className="label">HRV RMSSD</div><div className="num mt-1 text-3xl font-semibold">{hrv ?? '—'}</div><div className="text-[11px] text-ink-mute">ms</div></div>
+        <Stat k="Live HR" v={cur ?? '—'} u="bpm" attr="data-ble-live" />
+        <Stat k="Median" v={med ?? '—'} u={`bpm · last ${recent.length} readings`} attr="data-ble-median" />
+        <Stat k="HRV RMSSD" v={hrv.rmssd ?? '—'} u={`ms · ${hrv.used} beat pairs${hrv.dropped ? `, ${hrv.dropped} filtered` : ''}`} attr="data-ble-hrv" />
       </div>
-      <div className="mt-2"><Trace data={hrs} color="#F43F5E" /></div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {state === 'live' || state === 'sim'
+      <div className="mt-2"><Trace data={hrs} color="#F43F5E" label={on ? 'Waiting for the first beat…' : 'Heart-rate trend appears here'} /></div>
+      {on && <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-mute">
+        <span className="truncate">{name}</span>
+        {battery != null && <span className="chip border-white/10 px-2 py-0.5 text-[10.5px]" data-ble-battery><BatteryMedium size={11} aria-hidden />{battery}%</span>}
+        {contact !== 'unsupported' && <span className={`chip px-2 py-0.5 text-[10.5px] ${contact === 'ok' ? 'border-ok/30 text-ok' : 'border-warn/40 text-warn'}`} data-ble-contact={contact}>{contact === 'ok' ? 'Skin contact good' : 'No skin contact'}</span>}
+        {hrs.length > 0 && <span className="num">range {Math.min(...hrs)}–{Math.max(...hrs)} bpm</span>}
+      </div>}
+      {state === 'live' && (stale || contact === 'lost') && <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-warn/30 bg-warn/[0.06] p-2 text-xs text-ink-soft" role="status" data-ble-stale><TriangleAlert size={13} className="text-warn" aria-hidden />{contact === 'lost' ? 'The strap reports no skin contact. Moisten the electrodes and tighten it.' : 'No data for 5 seconds. Check the strap is snug and in range.'}</div>}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {on
           ? <button className="btn-ghost" onClick={disconnect}><BluetoothOff size={15} aria-hidden /> Disconnect {name}</button>
-          : <button className="btn-primary" onClick={connect} disabled={state === 'connecting'} data-ble><Bluetooth size={15} aria-hidden />{state === 'connecting' ? 'Choose your strap…' : 'Connect strap'}</button>}
-        {state !== 'live' && state !== 'sim' && <button className="btn-ghost" onClick={simulate} data-ble-sim>Use simulated strap</button>}
+          : <button className="btn-primary" onClick={connect} disabled={state === 'connecting'} data-ble>{state === 'error' ? <RefreshCw size={15} aria-hidden /> : <Bluetooth size={15} aria-hidden />}{state === 'connecting' ? 'Choose your strap…' : state === 'error' ? 'Try again' : 'Connect strap'}</button>}
+        {!on && state !== 'connecting' && <button className="btn-ghost" onClick={simulate} data-ble-sim>Use simulated strap</button>}
         {med != null && hrs.length >= 10 && <button className="btn-ghost" onClick={() => { h.logValue('hr', med); h.pushToast('Heart rate logged', `${med} bpm median from ${name}.`, 'ok') }} data-ble-log>Log median as resting HR</button>}
       </div>
-      {state === 'error' && <div className="mt-2 rounded-xl border border-warn/30 bg-warn/[0.06] p-2.5 text-xs text-ink-soft" role="status">{err} The simulated strap shows the same flow.</div>}
+      {state === 'error' && <div className="mt-2 rounded-xl border border-warn/30 bg-warn/[0.06] p-2.5 text-xs text-ink-soft" role="status" data-ble-error>{err} The simulated strap shows the same flow.</div>}
       {state === 'sim' && <div className="mt-2"><Illustrative text="Simulated strap data" /></div>}
+      <ol className="mt-3 grid gap-1.5 text-[11px] text-ink-mute sm:grid-cols-3">{['Wet the electrodes and put the strap on', 'Press Connect and pick it from the list', 'Sit still for 60 s, then log the median'].map((x, i) => <li key={x} className="flex items-center gap-1.5 rounded-lg border border-white/[0.05] px-2 py-1.5"><span className="num flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[9px] text-ink-soft">{i + 1}</span>{x}</li>)}</ol>
     </Panel>
   )
 }

@@ -75,6 +75,9 @@ export function ReadinessView() {
                 )
               })}
             </ol>
+            <div className="mt-3 grid gap-2 text-[11px] text-ink-soft sm:grid-cols-3">
+              {(['go', 'caution', 'nogo'] as const).map((k) => { const g = GO_META[k]; return <div key={k} className="rounded-xl border border-white/[0.06] p-2"><span className="font-medium" style={{ color: g.color }}>{g.label}</span><div className="mt-0.5 text-ink-mute">{k === 'go' ? 'In your personal range' : k === 'caution' ? 'Watch state or a weaker weekly check' : 'Drift, fever, or an active solar storm'}</div></div> })}
+            </div>
             <div className="mt-3"><Prov ids={['hazGravity', 'hrpRisks', 'donki']} label="Based on:" /></div>
           </Panel>
         </div>

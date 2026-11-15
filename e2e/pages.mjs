@@ -15,7 +15,7 @@ await p.click('[data-welcome-close]')
 const views = (process.env.VIEWS || 'console,body,log,sensors,insights,radiation,triage,readiness,sol,ground,packet,crew,clinical,lab,blackbox,sources,next,earth').split(',')
 for (const v of views) {
   await p.evaluate((v) => document.querySelector(`[data-nav="${v}"]`)?.click(), v)
-  await p.waitForTimeout(v === 'radiation' ? 1800 : 600)
+  await p.waitForTimeout(v === 'radiation' || v === 'body' ? 3000 : 600)
   await p.screenshot({ path: `${OUT}${W}-${v}.png`, fullPage: true })
 }
 console.log('errors', JSON.stringify(errs.slice(0, 10)))

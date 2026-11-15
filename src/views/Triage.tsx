@@ -54,6 +54,21 @@ export function TriageView() {
               </li>
             ))}
           </ol>
+          <div className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3" data-rules-checked>
+            <div className="mb-2 flex items-center justify-between"><div className="label">Every rule HALO checked just now</div><span className="num text-[11px] text-ink-mute">{t.hits.length} of 9 triggered</span></div>
+            <ul className="grid gap-1.5 sm:grid-cols-2">
+              {([['R1', 'Space weather', h.speActive ? 'particle event' : h.watchActive ? 'watch' : 'quiet'], ['R2', 'Fever', `${h.latest.temp ?? '—'} °C`], ['R3', 'Blood pressure', `${h.latest.sbp ?? '—'}/${h.latest.dbp ?? '—'}`], ['R4', 'Glucose', `${h.latest.glucose ?? '—'} mg/dL`], ['R5', 'Mood', `${h.latest.mood ?? '—'}/5`], ['R6', 'Sleep', `${h.latest.sleep ?? '—'} h`], ['R7', 'Reaction time', `${h.latest.pvt ?? '—'} ms`], ['R8', 'Exercise', `${h.latest.exercise ?? '—'} min`], ['R9', 'Heart rate', `${h.latest.hr ?? '—'} bpm`]] as const).map(([id, name, val]) => {
+                const hit = t.hits.find((x) => x.id.startsWith(id + '-') || x.id.startsWith(id + 'b-'))
+                return (
+                  <li key={id} className={`flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs ${hit ? (hit.level === 'urgent' ? 'border-alert/40 bg-alert/[0.06]' : 'border-warn/40 bg-warn/[0.06]') : 'border-white/[0.06]'}`}>
+                    <span className="num w-6 shrink-0 text-ink-mute">{id}</span><span className="min-w-0 flex-1 truncate text-ink-soft">{name}</span><span className="num shrink-0 text-ink-mute">{val}</span>
+                    <span className={`shrink-0 font-medium ${hit ? (hit.level === 'urgent' ? 'text-alert' : 'text-warn') : 'text-ok'}`}>{hit ? (hit.level === 'self' ? 'self' : hit.level) : 'clear'}</span>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="mt-2 text-[11px] text-ink-mute">Same inputs always give the same answer. No network, no model, no guesswork: every rule is listed in the decision tree.</p>
+          </div>
         </Panel>
 
         <div className="space-y-5">

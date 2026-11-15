@@ -50,6 +50,7 @@ export function LogView() {
             ))}
           </ol>
           <div className="mt-4 rounded-xl bg-white/[0.03] p-3 text-xs text-ink-soft"><b className="text-ink">Why it matters:</b> {meta.why}</div>
+          <div className="mt-2 rounded-xl border border-teal/20 bg-teal/[0.05] p-3 text-xs text-ink-soft"><b className="text-teal">{meta.guideline.kind === 'guideline' ? 'Clinical reference: ' : 'Reference note: '}</b>{meta.guideline.text}<div className="mt-1.5"><Prov ids={meta.guideline.sources} /></div></div>
         </Panel>
       </div>
 
@@ -74,6 +75,11 @@ export function LogView() {
             <div className="rounded-xl border border-white/[0.06] p-2"><dt className="label">Corrections</dt><dd className="num mt-1 text-lg">{signals.corrections}</dd></div>
             <div className="rounded-xl border border-white/[0.06] p-2"><dt className="label">Hour</dt><dd className="num mt-1 text-lg">{new Date().getHours().toString().padStart(2, '0')}:00</dd></div>
           </dl>
+          <ul className="mt-3 space-y-1.5 text-xs text-ink-soft">
+            <li className="flex gap-2"><span className="text-teal">•</span>Slower tap tempo than your usual can mean fatigue.</li>
+            <li className="flex gap-2"><span className="text-teal">•</span>More corrections than usual can mean reduced attention.</li>
+            <li className="flex gap-2"><span className="text-teal">•</span>Logging far outside your normal hours can mean a shifted body clock.</li>
+          </ul>
           <div className="mt-3 text-[11px] text-ink-mute">Shown for transparency. These features are logged only and do not raise flags until validated against crew data.</div>
         </Panel>
       </div>
@@ -285,6 +291,11 @@ function BalanceTest() {
         </div>
       )}
       {mode === 'done' && <div className="mt-3 rounded-xl bg-white/[0.03] p-3 text-sm">Saved: <span className="num">{score}</span>. <button className="text-teal underline" onClick={() => setMode('idle')}>Repeat</button></div>}
+      <div className="mt-3 rounded-xl border border-white/[0.06] p-3">
+        <div className="label mb-1.5">Recent checks</div>
+        <ul className="space-y-1 text-xs text-ink-soft">{h.allTests.filter((t) => t.kind === 'balance' && t.day <= h.day).slice(-4).reverse().map((t, k) => <li key={k} className="flex items-center gap-2"><span className="num w-10 text-ink-mute">D{t.day}</span><span className={`h-1.5 w-1.5 rounded-full ${t.value < 0 ? 'bg-warn' : 'bg-ok'}`} aria-hidden /><span className="truncate">{t.detail}</span></li>)}</ul>
+        <p className="mt-2 text-[11px] text-ink-mute">A drop from your own usual result feeds the EVA Go/No-Go poll and Landing Readiness.</p>
+      </div>
       <div className="mt-2"><Illustrative text="Go/no-go aid, not clinical" /></div>
     </Panel>
   )

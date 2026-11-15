@@ -3,6 +3,11 @@
 @import '@fontsource/jetbrains-mono/600.css';
 
 @tailwind base;
+@layer base {
+  /* Grid tracks may never be widened by their content (charts, canvases): keeps every page inside the viewport. */
+  :where(main) .grid { grid-template-columns: minmax(0, 1fr); }
+  :where(main) .grid > * { min-width: 0; }
+}
 @tailwind components;
 @tailwind utilities;
 

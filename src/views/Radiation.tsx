@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 const Orbit3D = lazy(() => import('../ui/Orbit3D'))
+const Habitat3D = lazy(() => import('../ui/Habitat3D'))
 import { CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { CheckSquare, CloudDownload, ExternalLink, ShieldCheck, Square, Timer, Zap } from 'lucide-react'
 import { ReadAloud } from '../ui/kit'
@@ -65,16 +66,20 @@ export function RadiationView() {
             </ul>
             {drill && <button className="btn-ghost mt-3" onClick={() => { setDrill(false); setChecked(CHECK.map(() => false)) }}>End drill</button>}
           </Panel>
-          <Panel title="Shelter map" kicker="Illustrative cabin plan" right={<Illustrative text="Illustrative layout" />}>
-            <ShelterMap />
+          <Panel title="Shelter map" kicker="3D cutaway · crew move in as you tick the checklist" right={<Illustrative text="Illustrative layout" />}>
+            <Suspense fallback={<div className="h-[330px] animate-pulse rounded-2xl bg-white/[0.03]" />}>
+              <Habitat3D storm={h.speActive} inShelter={Math.round((checked.filter(Boolean).length / CHECK.length) * 4)} reduce={h.a11y.reduce} />
+            </Suspense>
+            <details className="mt-2 text-xs text-ink-mute"><summary className="focus-ring cursor-pointer rounded text-ink-soft">Show the flat floor plan</summary><div className="mt-2"><ShelterMap /></div></details>
+            <p className="mt-2 text-xs text-ink-soft">Water and stowage absorb charged particles, so the shelter is lined with both. NASA’s limit is {FACTS.speLimit.value}.</p>
           </Panel>
         </div>
       )}
 
       <Panel title="Where the crew is" kicker="3D Earth → Mars transfer · drag to rotate" tour="orbit3d" right={<span className="chip border-white/10 text-ink-mute">Schematic timing</span>}>
         <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
-          <Suspense fallback={<div className="h-[340px] animate-pulse rounded-2xl bg-white/[0.03]" />}>
-            <Orbit3D day={h.day} reduce={h.a11y.reduce} />
+          <Suspense fallback={<div className="h-[420px] animate-pulse rounded-2xl bg-white/[0.03]" />}>
+            <Orbit3D day={h.day} reduce={h.a11y.reduce} delayLabel={`${Math.floor(h.delaySec / 60)} min ${Math.round(h.delaySec % 60)} s`} />
           </Suspense>
           <div className="space-y-2 text-sm">
             {[
@@ -83,6 +88,12 @@ export function RadiationView() {
               ['Cruise dose rate', FACTS.cruiseDose.value],
               ['Storm on record', `D${SPE_DAY} · 20 May 2024 (real DONKI event)`],
             ].map(([k, v]) => <div key={k} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2"><div className="label">{k}</div><div className="num mt-0.5 text-[13px] text-ink">{v}</div></div>)}
+            <ol className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2" aria-label="Mission timeline">
+              {([[1, 'Trans-Mars injection'], [84, 'X8.7 flare: space-weather watch'], [SPE_DAY, 'Solar particle event: shelter'], [157, 'Fever: autonomous triage'], [MISSION_DAYS, 'Mars arrival']] as const).map(([d, t]) => (
+                <li key={d}><button onClick={() => h.setDay(d)} className={`focus-ring flex w-full items-center gap-2 rounded-md py-1 text-left text-[12px] hover:text-ink ${h.day >= d ? 'text-ink-soft' : 'text-ink-mute'}`} data-tl={d}>
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${h.day >= d ? 'bg-teal' : 'border border-white/30'}`} aria-hidden /><span className="num w-9 shrink-0">D{d}</span><span className="truncate">{t}</span></button></li>
+              ))}
+            </ol>
             <p className="text-[11px] text-ink-mute">Orbit sizes are to scale. The scenario compresses the transfer to {MISSION_DAYS} days, so positions are schematic. Around D{SPE_DAY} the red shell shows the storm sweeping outward.</p>
             <Prov ids={['radCruise', 'marsStorm']} />
           </div>

@@ -1,4 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
+import { hasWebGL } from '../ui/three-kit'
+const Body3D = lazy(() => import('../ui/Body3D'))
 import { motion } from 'framer-motion'
 import { Activity, Bone, Brain, Ear, Eye, HeartPulse, Moon, ShieldPlus } from 'lucide-react'
 import { HAZ, IND, SYSTEMS, type SystemId } from '../data/domain'
@@ -6,6 +8,7 @@ import { useHalo } from '../state/store'
 import type { DriftState } from '../engine/drift'
 import { Panel, Prov, ReadAloud, Seg, StatePill, STATE_META, lens, Simulated } from '../ui/kit'
 import { IndicatorChart } from '../ui/charts'
+import { bpCategory, classify } from '../data/clinical'
 
 const RANK: Record<DriftState, number> = { nodata: 0, ok: 1, adapt: 2, watch: 3, drift: 4 }
 const ICON: Record<SystemId, typeof Brain> = { brain: Brain, eyes: Eye, sensorimotor: Ear, sleep: Moon, cardio: HeartPulse, immune: ShieldPlus, msk: Bone }
@@ -28,16 +31,26 @@ export function BodyView() {
   const [sel, setSel] = useState<SystemId>('sleep')
   const [hover, setHover] = useState<SystemId | null>(null)
   const [level, setLevel] = useState<'simple' | 'crew' | 'surgeon'>('crew')
+  const [mode, setMode] = useState<'3d' | '2d'>(() => (hasWebGL() ? '3d' : '2d'))
   const stateOf = useSystemState()
   const s = SYSTEMS.find((x) => x.id === sel)!
   const st = stateOf(sel)
   const lastCheck = (k: 'vision' | 'balance') => h.allTests.filter((x) => x.kind === k && x.day <= h.day).at(-1)
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(380px,0.95fr)_1.2fr]">
+    <div className="grid gap-5 xl:grid-cols-[1.08fr_1fr]">
       <Panel title="Body Map" kicker={`${h.mission.crew.find((c) => c.id === h.crewId)!.name} · day ${h.day}`} tour="bodymap" right={<Simulated />}>
-        <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_196px]">
-          <Figure sel={sel} hover={hover} onSelect={setSel} onHover={setHover} stateOf={stateOf} />
-          <ul className="grid content-start gap-1.5" aria-label="Body systems">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <Seg label="Figure style" size="sm" value={mode} onChange={setMode} options={[{ v: '3d', label: '3D hologram' }, { v: '2d', label: '2D diagram' }]} />
+          <span className="text-[11px] text-ink-mute">Colour = state vs this astronaut’s own baseline</span>
+        </div>
+        <div className={mode === '3d' ? 'space-y-3' : 'grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_196px]'}>
+          {mode === '3d'
+            ? <Suspense fallback={<div className="h-[560px] animate-pulse rounded-2xl bg-white/[0.03]" />}>
+                <Body3D sel={sel} onSelect={setSel} hr={h.latest.hr ?? null} reduce={h.a11y.reduce}
+                  systems={SYSTEMS.map((x) => ({ id: x.id, name: x.name.split(' &')[0].split(' and')[0], color: STATE_META[stateOf(x.id)].color, label: STATE_META[stateOf(x.id)].label, dim: !!h.hazard && !x.hazards.includes(h.hazard) }))} />
+              </Suspense>
+            : <Figure sel={sel} hover={hover} onSelect={setSel} onHover={setHover} stateOf={stateOf} />}
+          <ul className={mode === '3d' ? 'grid grid-cols-2 gap-1.5 md:grid-cols-4' : 'grid content-start gap-1.5'} aria-label="Body systems">
             {SYSTEMS.map((sys) => {
               const stt = stateOf(sys.id)
               const I = ICON[sys.id]
@@ -55,6 +68,7 @@ export function BodyView() {
             })}
           </ul>
         </div>
+        <TodayBySystem onPick={setSel} sel={sel} />
       </Panel>
 
       <motion.div key={sel} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>
@@ -158,5 +172,35 @@ function Figure({ sel, hover, onSelect, onHover, stateOf }: { sel: SystemId; hov
       {G('immune', <>{[[106, 98], [134, 98], [84, 128], [156, 128], [104, 268], [136, 268], [120, 124]].map(([x, y], k) => <circle key={k} cx={x} cy={y} r={k === 6 ? 5 : 3.6} fill={fill('immune')} stroke="currentColor" strokeWidth="1.3" />)}<path d="M106,98 L84,128 M134,98 L156,128 M84,128 L104,268 M156,128 L136,268" stroke="currentColor" strokeWidth=".6" opacity=".35" fill="none" strokeDasharray="2 3" /></>)}
       {G('msk', <><g stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill={fill('msk')}><line x1="104" y1="300" x2="101" y2="382" /><line x1="136" y1="300" x2="139" y2="382" /><circle cx="101" cy="390" r="6" /><circle cx="139" cy="390" r="6" /><line x1="100" y1="398" x2="99" y2="462" /><line x1="140" y1="398" x2="141" y2="462" /></g></>)}
     </svg>
+  )
+}
+
+/** Compact table: each system's key reading today, its guideline category and its drift state. */
+function TodayBySystem({ onPick, sel }: { onPick: (s: SystemId) => void; sel: SystemId }) {
+  const h = useHalo()
+  const stateOf = useSystemState()
+  const last = (k: 'vision' | 'balance') => h.allTests.filter((x) => x.kind === k && x.day <= h.day).at(-1)?.detail.split(' (')[0] ?? 'no check yet'
+  const row = (id: SystemId): string => {
+    const L = h.latest
+    switch (id) {
+      case 'cardio': return `${L.hr ?? '—'} bpm · ${L.sbp ?? '—'}/${L.dbp ?? '—'} mmHg${bpCategory(L.sbp, L.dbp) ? ` (${bpCategory(L.sbp, L.dbp)!.label})` : ''}`
+      case 'sleep': return `${L.sleep ?? '—'} h last night${classify('sleep', L.sleep) ? ` (${classify('sleep', L.sleep)!.label})` : ''}`
+      case 'brain': return `reaction ${L.pvt ?? '—'} ms · mood ${L.mood ?? '—'}/5`
+      case 'immune': return `${L.temp ?? '—'} °C${classify('temp', L.temp) ? ` (${classify('temp', L.temp)!.label})` : ''}`
+      case 'msk': return `${L.exercise ?? '—'} min exercise today`
+      case 'eyes': return `vision: ${last('vision')}`
+      default: return `balance: ${last('balance')}`
+    }
+  }
+  return (
+    <div className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3" data-today-systems>
+      <div className="mb-2 flex items-center justify-between"><div className="label">Today by system</div><span className="text-[11px] text-ink-mute">day {h.day} · tap a row</span></div>
+      <ul className="divide-y divide-white/[0.05]">
+        {SYSTEMS.map((s) => { const m = STATE_META[stateOf(s.id)]; return (
+          <li key={s.id}><button onClick={() => onPick(s.id)} className={`focus-ring flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left text-[12.5px] hover:bg-white/[0.04] ${sel === s.id ? 'bg-teal/[0.06]' : ''}`}>
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: m.color }} aria-hidden /><span className="w-36 shrink-0 truncate text-ink">{s.name}</span><span className="num min-w-0 flex-1 truncate text-ink-soft">{row(s.id)}</span><span className={`shrink-0 text-[11px] ${m.text}`}>{m.label}</span>
+          </button></li>) })}
+      </ul>
+    </div>
   )
 }
