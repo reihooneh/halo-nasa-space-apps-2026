@@ -6,7 +6,7 @@ import { runTriage, DEFAULT_MEDKIT, type MedItem, type TriageResult } from '../e
 import { crewHealthIndex, type Chi } from '../engine/insights'
 import type { DriftState } from '../engine/drift'
 
-export type ViewId = 'console' | 'body' | 'log' | 'insights' | 'radiation' | 'ground' | 'triage' | 'packet' | 'crew' | 'lab' | 'blackbox' | 'earth' | 'sources' | 'next' | 'readiness'
+export type ViewId = 'console' | 'body' | 'log' | 'insights' | 'radiation' | 'ground' | 'triage' | 'packet' | 'crew' | 'lab' | 'blackbox' | 'earth' | 'sources' | 'next' | 'readiness' | 'sensors' | 'sol' | 'clinical'
 
 export interface GroundMsg { id: string; day: number; dir: 'up' | 'down'; text: string; sentAt: number; delaySec: number; kind: 'packet' | 'note' | 'reply' }
 export interface A11y { glove: boolean; contrast: boolean; reduce: boolean }

@@ -34,3 +34,19 @@ describe('Bluetooth heart-rate measurement parsing', () => {
     expect(rmssd([1000])).toBeNull()
   })
 })
+
+import { blandAltman, hrTolerance } from './agreement'
+describe('Bland–Altman agreement', () => {
+  it('computes bias and 95% limits of agreement', () => {
+    const r = blandAltman([{ a: 62, b: 60 }, { a: 70, b: 70 }, { a: 81, b: 80 }, { a: 59, b: 60 }])!
+    expect(r.bias).toBeCloseTo(0.5, 5)
+    expect(r.sd).toBeCloseTo(1.2910, 3)
+    expect(r.loaHigh).toBeCloseTo(0.5 + 1.96 * 1.2910, 2)
+    expect(r.withinSpec).toBe(1)
+  })
+  it('ANSI tolerance is the greater of 5 bpm or 10%', () => {
+    expect(hrTolerance(40)).toBe(5)
+    expect(hrTolerance(120)).toBe(12)
+  })
+  it('needs at least 2 pairs', () => { expect(blandAltman([{ a: 1, b: 1 }])).toBeNull() })
+})

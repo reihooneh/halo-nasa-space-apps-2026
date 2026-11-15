@@ -24,7 +24,7 @@ const audit = async (name) => {
 const day = (d) => p.evaluate((d) => { const el = document.querySelector('#day'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, String(d)); el.dispatchEvent(new Event('input', { bubbles: true })) }, d)
 await audit('welcome dialog')
 await p.click('[data-welcome-close]')
-const views = ['console', 'body', 'log', 'insights', 'radiation', 'triage', 'readiness', 'ground', 'packet', 'crew', 'lab', 'blackbox', 'sources', 'earth', 'next']
+const views = ['console', 'body', 'log', 'insights', 'radiation', 'triage', 'readiness', 'ground', 'packet', 'crew', 'lab', 'blackbox', 'sources', 'earth', 'next', 'sensors', 'sol', 'clinical']
 for (const v of views) { await p.click(`[data-nav="${v}"]`); await audit(`view ${v}`) }
 await day(90); await p.click('[data-nav="radiation"]'); await audit('radiation during storm (D90)')
 await day(157); await p.click('[data-nav="triage"]'); await audit('triage urgent (D157)')

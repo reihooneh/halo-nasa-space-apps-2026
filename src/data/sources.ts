@@ -1,7 +1,7 @@
 // Single source of truth for every external source and every number shown in HALO.
 // Rule: no number appears in the UI unless it is a FACT here (sourced) or is marked illustrative.
 
-export type Org = 'NASA' | 'CSA' | 'NASA CCMC' | 'NASA-funded study' | 'Peer-reviewed' | 'Other' | 'Space Apps'
+export type Org = 'NASA' | 'CSA' | 'NASA CCMC' | 'NASA-funded study' | 'Peer-reviewed' | 'Clinical guideline' | 'Other' | 'Space Apps'
 
 export interface Source {
   id: string
@@ -43,6 +43,24 @@ export const SOURCES: Record<string, Source> = {
   sleepStudy: { id: 'sleepStudy', title: 'Barger et al. 2014, The Lancet Neurology: sleep deficiency in astronauts (NASA/NSBRI-funded)', org: 'NASA-funded study', url: 'https://www.eurekalert.org/news-releases/595450' },
   thirdQuarter: { id: 'thirdQuarter', title: 'Kanas et al. 2021, Whither the third quarter phenomenon? (Aerosp Med Hum Perform)', org: 'Peer-reviewed', url: 'https://asma.kglmeridian.com/downloadpdf/view/journals/amhp/92/8/article-p689.pdf' },
   judging: { id: 'judging', title: 'NASA Space Apps Judging & Awards Guide', org: 'Space Apps', url: 'https://www.spaceappschallenge.org/resources/judging-awards-guide/' },
+  // Clinical guidelines (published reference ranges HALO checks readings against)
+  ahaBp: { id: 'ahaBp', title: 'American Heart Association: Understanding Blood Pressure Readings', org: 'Clinical guideline', url: 'https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings' },
+  nhlbiLowBp: { id: 'nhlbiLowBp', title: 'NIH NHLBI: Low Blood Pressure', org: 'Clinical guideline', url: 'https://www.nhlbi.nih.gov/node/4880' },
+  mayoHr: { id: 'mayoHr', title: 'Mayo Clinic: Heart rate, what is normal? (cites AHA)', org: 'Clinical guideline', url: 'https://www.mayoclinic.org/healthy-lifestyle/fitness/expert-answers/heart-rate' },
+  cdcFever: { id: 'cdcFever', title: 'CDC: Definitions of Signs, Symptoms, and Conditions of Ill Travelers (fever)', org: 'Clinical guideline', url: 'https://www.cdc.gov/port-health/php/definitions-symptoms-reportable-illness' },
+  adaGlucose: { id: 'adaGlucose', title: 'ADA Standards of Care in Diabetes 2025 (glucose levels, Diabetes Care 48 Suppl 1)', org: 'Clinical guideline', url: 'https://pmc.ncbi.nlm.nih.gov/articles/11635037' },
+  adaTir: { id: 'adaTir', title: 'Definitions of hypo/hyperglycaemia and time in range (Table 1)', org: 'Peer-reviewed', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6531520/table/Tab1' },
+  aasmSleep: { id: 'aasmSleep', title: 'AASM & Sleep Research Society 2015: Recommended amount of sleep for a healthy adult', org: 'Clinical guideline', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4434546/' },
+  aasmPress: { id: 'aasmPress', title: 'AASM: Seven or more hours of sleep per night, a health necessity for adults', org: 'Clinical guideline', url: 'https://aasm.org/seven-or-more-hours-of-sleep-per-night-a-health-necessity-for-adults/' },
+  pvtB: { id: 'pvtB', title: 'Basner, Mollicone & Dinges 2011, Acta Astronautica: brief 3-min PVT (PVT-B)', org: 'NASA-funded study', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC3197786/' },
+  pvtRst: { id: 'pvtRst', title: 'Jones et al. 2022, SLEEP: Reaction Self Test in 24 astronauts on 6-month ISS missions', org: 'NASA-funded study', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8919197' },
+  spinoffRst: { id: 'spinoffRst', title: 'NASA Spinoff 2013: 3-minute PVT renamed the Reaction Self-Test on the ISS', org: 'NASA', url: 'https://spinoff.nasa.gov/Spinoff2013/hm_1.html' },
+  pvtLapse: { id: 'pvtLapse', title: 'Arsintescu et al. 2017, Behavior Research Methods: PVT lapses >500 ms; PVT-B uses 355 ms', org: 'Peer-reviewed', url: 'https://dx.doi.org/10.3758/s13428-016-0763-8' },
+  ada1515: { id: 'ada1515', title: 'American Diabetes Association: severe hypoglycaemia guide (15-15 rule)', org: 'Clinical guideline', url: 'https://professional.diabetes.org/sites/dpro/files/2025-10/xeris-severe-hypoglycemia-what-to-know-with-a-low-patient-7-14-25-002.pdf' },
+  hrAccuracy: { id: 'hrAccuracy', title: 'Cosoli et al. 2018, JMIR: validating wearable heart-rate monitors (ANSI accuracy ±10% or ±5 bpm)', org: 'Peer-reviewed', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6048383' },
+  blandAltman: { id: 'blandAltman', title: 'Bland and Altman 1986, The Lancet: agreement between two methods of clinical measurement', org: 'Peer-reviewed', url: 'https://doi.org/10.1016/S0140-6736(86)90837-8' },
+  phq2: { id: 'phq2', title: 'Kroenke, Spitzer & Williams 2003, Medical Care: PHQ-2 two-item depression screener', org: 'Clinical guideline', url: 'https://www.hiv.uw.edu/page/mental-health-screening/phq-2' },
+  uepAstro: { id: 'uepAstro', title: 'UPenn Unit for Experimental Psychiatry: Astronaut behavioral health (Cognition battery, NASA Standard Measures)', org: 'NASA-funded study', url: 'https://www.med.upenn.edu/uep/cognition.html' },
 }
 
 export type FactKind = 'sourced' | 'illustrative'
@@ -78,7 +96,15 @@ export const FACTS: Record<string, Fact> = {
   speArrival: { id: 'speArrival', label: 'Solar storm arrival at Mars, 20 May 2024', value: 'flare X-rays at light speed; charged particles within tens of minutes', kind: 'sourced', sources: ['marsStorm'] },
   cgmIss: { id: 'cgmIss', label: 'Glucose monitoring in orbit', value: 'continuous glucose monitors validated aboard the ISS (Ax-4, 2025)', kind: 'sourced', sources: ['axiomCgm'] },
   thirdQuarter: { id: 'thirdQuarter', label: 'Third-quarter phenomenon', value: 'reported in some analog studies, not universal', kind: 'sourced', sources: ['thirdQuarter'] },
-  thresholds: { id: 'thresholds', label: 'Drift and triage thresholds', value: 'illustrative, not medical advice', kind: 'illustrative', sources: [] },
+  bpCats: { id: 'bpCats', label: 'AHA blood-pressure categories', value: 'normal <120/<80 · elevated 120–129/<80 · stage 1 130–139 or 80–89 · stage 2 ≥140 or ≥90 · crisis >180 and/or >120 mmHg', kind: 'sourced', sources: ['ahaBp'] },
+  lowBp: { id: 'lowBp', label: 'Low blood pressure (NHLBI)', value: 'below 90/60 mmHg', kind: 'sourced', sources: ['nhlbiLowBp'], note: 'Often normal for the person if there are no symptoms.' },
+  restHr: { id: 'restHr', label: 'Normal resting heart rate (adults)', value: '60–100 bpm', kind: 'sourced', sources: ['mayoHr'], note: 'Very fit people can rest near 40 bpm.' },
+  fever: { id: 'fever', label: 'Fever (CDC)', value: 'measured temperature ≥ 38.0 °C (100.4 °F)', kind: 'sourced', sources: ['cdcFever'] },
+  glucoseLevels: { id: 'glucoseLevels', label: 'Glucose levels (ADA)', value: 'level 1 low 54–69 · level 2 low <54 · high >180 · very high >250 mg/dL · time-in-range 70–180', kind: 'sourced', sources: ['adaGlucose', 'adaTir'] },
+  sleepRec: { id: 'sleepRec', label: 'Adult sleep (AASM/SRS consensus)', value: '≥7 h per night; ≤6 h called inadequate', kind: 'sourced', sources: ['aasmSleep', 'aasmPress'] },
+  pvtB: { id: 'pvtB', label: 'Brief PVT (PVT-B)', value: '3 min · lapse = response ≥355 ms (10-min PVT: ≥500 ms) · false start <100 ms', kind: 'sourced', sources: ['pvtB', 'pvtLapse', 'spinoffRst'], note: 'NASA flies this as the Reaction Self-Test; used by 24 ISS astronauts.' },
+  phq2: { id: 'phq2', label: 'PHQ-2 depression screen', value: 'two items scored 0–3; total ≥3 = positive screen (needs follow-up, not a diagnosis)', kind: 'sourced', sources: ['phq2'] },
+  thresholds: { id: 'thresholds', label: 'Personal drift thresholds (z-score, persistence)', value: 'HALO design parameters, not clinical cut-offs', kind: 'illustrative', sources: [] },
 }
 
 export function sourcesOf(ids: string[]): Source[] {

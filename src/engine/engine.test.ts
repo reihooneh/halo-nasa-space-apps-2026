@@ -1,3 +1,4 @@
+import { bpCategory, classify, phq2Positive, PVT_B } from '../data/clinical'
 import { describe, expect, it } from 'vitest'
 import { analyze, mad, median, populationFlags, robustScale, slopeAt } from './drift'
 import { runTriage, DEFAULT_MEDKIT } from './triage'
@@ -99,7 +100,7 @@ describe('triage rules', () => {
     expect(t.contactGround).toBe(false)
   })
   it('fever + high heart rate = urgent and contact ground', () => {
-    const t = runTriage({ ...base, latest: { temp: 38.4, hr: 96 } })
+    const t = runTriage({ ...base, latest: { temp: 38.4, hr: 106 } })
     expect(t.level).toBe('urgent')
     expect(t.contactGround).toBe(true)
     expect(t.hits[0].id).toBe('R2-FEVER+HR')
@@ -116,7 +117,7 @@ describe('triage rules', () => {
     expect(runTriage({ ...base, states: { sleep: 'drift' } }).level).toBe('monitor')
   })
   it('long delay switches to autonomous protocol', () => {
-    const t = runTriage({ ...base, latest: { temp: 38.5, hr: 100 }, delaySec: 1100 })
+    const t = runTriage({ ...base, latest: { temp: 38.5, hr: 104 }, delaySec: 1100 })
     expect(t.autonomous).toBe(true)
     expect(t.groundNote).toMatch(/HALO runs the protocol now/)
   })
@@ -126,8 +127,46 @@ describe('triage rules', () => {
     expect(t.supplyWarnings.some((w) => w.includes('none left'))).toBe(true)
     expect(t.supplyWarnings.some((w) => w.includes('only 2 left'))).toBe(true)
   })
-  it('very high BP = urgent', () => {
-    expect(runTriage({ ...base, latest: { sbp: 165, dbp: 95 } }).level).toBe('urgent')
+  it('AHA stage 2 BP = monitor; hypertensive crisis = urgent', () => {
+    expect(runTriage({ ...base, latest: { sbp: 165, dbp: 95 } }).hits[0].id).toBe('R3-BP-STAGE2')
+    expect(runTriage({ ...base, latest: { sbp: 165, dbp: 95 } }).level).toBe('monitor')
+    expect(runTriage({ ...base, latest: { sbp: 185, dbp: 100 } }).level).toBe('urgent')
+    expect(runTriage({ ...base, latest: { sbp: 150, dbp: 121 } }).level).toBe('urgent')
+    expect(runTriage({ ...base, latest: { sbp: 180, dbp: 120 } }).level).toBe('monitor') // crisis is strictly above
+  })
+  it('NHLBI low BP with tachycardia = urgent', () => {
+    expect(runTriage({ ...base, latest: { sbp: 85, dbp: 55, hr: 112 } }).hits[0].id).toBe('R3-BP-LOW')
+  })
+  it('ADA glucose levels', () => {
+    expect(runTriage({ ...base, latest: { glucose: 50 } }).level).toBe('urgent')
+    expect(runTriage({ ...base, latest: { glucose: 62 } }).level).toBe('monitor')
+    expect(runTriage({ ...base, latest: { glucose: 70 } }).hits.length).toBe(0)
+    expect(runTriage({ ...base, latest: { glucose: 190 } }).level).toBe('monitor')
+    expect(runTriage({ ...base, latest: { glucose: 260 } }).level).toBe('urgent')
+  })
+})
+
+describe('clinical classification (published guidelines)', () => {
+  it('AHA blood pressure categories', () => {
+    expect(bpCategory(118, 76)?.label).toBe('Normal')
+    expect(bpCategory(124, 78)?.label).toBe('Elevated')
+    expect(bpCategory(132, 78)?.label).toBe('Stage 1 hypertension')
+    expect(bpCategory(118, 84)?.label).toBe('Stage 1 hypertension')
+    expect(bpCategory(142, 70)?.label).toBe('Stage 2 hypertension')
+    expect(bpCategory(181, 90)?.label).toBe('Hypertensive crisis')
+    expect(bpCategory(88, 58)?.label).toMatch(/Low/)
+  })
+  it('CDC fever, ADA glucose, AASM sleep, PHQ-2', () => {
+    expect(classify('temp', 38.0)?.tone).toBe('bad')
+    expect(classify('temp', 37.9)?.tone).toBe('ok')
+    expect(classify('glucose', 53)?.label).toMatch(/Level 2 low/)
+    expect(classify('glucose', 69)?.label).toMatch(/Level 1 low/)
+    expect(classify('glucose', 180)?.tone).toBe('ok')
+    expect(classify('sleep', 6)?.tone).toBe('warn')
+    expect(classify('sleep', 7)?.tone).toBe('ok')
+    expect(phq2Positive(3)).toBe(true)
+    expect(phq2Positive(2)).toBe(false)
+    expect(PVT_B.lapseMs).toBe(355)
   })
 })
 

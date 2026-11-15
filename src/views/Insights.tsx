@@ -23,7 +23,7 @@ export function InsightsView() {
   const endBase = f.points.at(-1)?.base, endCm = f.points.at(-1)?.cm
   return (
     <div className="space-y-5">
-      <Panel title="Drift explorer" kicker="Personal baseline vs population threshold" right={<><Simulated /><Illustrative /></>}>
+      <Panel title="Drift explorer" kicker="Personal baseline vs fixed guideline threshold" right={<><Simulated /><Illustrative /></>}>
         <div className="flex flex-wrap gap-2">
           {INDICATORS.map((i) => (
             <button key={i.id} onClick={() => setInd(i.id)} aria-pressed={ind === i.id} className={`focus-ring chip ${ind === i.id ? 'border-teal/50 bg-teal/10 text-teal' : 'border-white/10 text-ink-soft'} ${lens(h.hazard, i.hazards)}`}>{i.short}<StateDot s={h.states[i.id]} /></button>
@@ -33,7 +33,7 @@ export function InsightsView() {
         <div className="mt-2 flex flex-wrap gap-4 text-[11px] text-ink-mute">
           <span><span className="mr-1 inline-block h-2 w-4 rounded-sm bg-teal/30 align-middle" />personal range (±2 robust SD)</span>
           <span><span className="mr-1 inline-block w-4 border-t border-dashed border-teal align-middle" />personal baseline</span>
-          <span><span className="mr-1 inline-block w-4 border-t border-dotted border-ink-soft align-middle" />population threshold</span>
+          <span><span className="mr-1 inline-block w-4 border-t border-dotted border-ink-soft align-middle" />guideline threshold</span>
           <span>△ drift · ○ watch</span>
         </div>
       </Panel>

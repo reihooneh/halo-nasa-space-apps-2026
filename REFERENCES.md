@@ -40,6 +40,25 @@
 29. Axiom Space: Suite Ride research, first continuous glucose monitoring of crew aboard the ISS (Ax-4, 2025). https://axiomspace.com/release/suite-ride-research-unlocks-potential-for-first-astronaut-with-diabetes
 30. NASA Space Apps Judging & Awards Guide 2026. https://www.spaceappschallenge.org/resources/judging-awards-guide/
 
+## Clinical guidelines and validated instruments (thresholds HALO checks against)
+- American Heart Association: Understanding Blood Pressure Readings. https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
+- NIH NHLBI: Low Blood Pressure. https://www.nhlbi.nih.gov/node/4880
+- Mayo Clinic: Heart rate, what is normal? (cites AHA). https://www.mayoclinic.org/healthy-lifestyle/fitness/expert-answers/heart-rate
+- CDC: Definitions of Signs, Symptoms, and Conditions of Ill Travelers (fever). https://www.cdc.gov/port-health/php/definitions-symptoms-reportable-illness
+- ADA Standards of Care in Diabetes 2025 (glucose levels, Diabetes Care 48 Suppl 1). https://pmc.ncbi.nlm.nih.gov/articles/11635037
+- Definitions of hypo/hyperglycaemia and time in range (Table 1). https://pmc.ncbi.nlm.nih.gov/articles/PMC6531520/table/Tab1
+- American Diabetes Association: severe hypoglycaemia guide (15-15 rule). https://professional.diabetes.org/sites/dpro/files/2025-10/xeris-severe-hypoglycemia-what-to-know-with-a-low-patient-7-14-25-002.pdf
+- AASM & Sleep Research Society 2015: Recommended amount of sleep for a healthy adult. https://pmc.ncbi.nlm.nih.gov/articles/PMC4434546/
+- AASM: Seven or more hours of sleep per night, a health necessity for adults. https://aasm.org/seven-or-more-hours-of-sleep-per-night-a-health-necessity-for-adults/
+- Kroenke, Spitzer & Williams 2003, Medical Care: PHQ-2 two-item depression screener. https://www.hiv.uw.edu/page/mental-health-screening/phq-2
+- Basner, Mollicone & Dinges 2011, Acta Astronautica: brief 3-min PVT (PVT-B). https://pmc.ncbi.nlm.nih.gov/articles/PMC3197786/
+- Jones et al. 2022, SLEEP: Reaction Self Test in 24 astronauts on 6-month ISS missions. https://pmc.ncbi.nlm.nih.gov/articles/PMC8919197
+- NASA Spinoff 2013: 3-minute PVT renamed the Reaction Self-Test on the ISS. https://spinoff.nasa.gov/Spinoff2013/hm_1.html
+- Arsintescu et al. 2017, Behavior Research Methods: PVT lapses >500 ms; PVT-B uses 355 ms. https://dx.doi.org/10.3758/s13428-016-0763-8
+- UPenn Unit for Experimental Psychiatry: Astronaut behavioral health (Cognition battery, NASA Standard Measures). https://www.med.upenn.edu/uep/cognition.html
+- Cosoli et al. 2018, JMIR: validating wearable heart-rate monitors (ANSI accuracy ±10% or ±5 bpm). https://pmc.ncbi.nlm.nih.gov/articles/PMC6048383
+- Bland and Altman 1986, The Lancet: agreement between two methods of clinical measurement. https://doi.org/10.1016/S0140-6736(86)90837-8
+
 ## Software libraries (open source)
 - React 18.3.1 and React DOM (MIT). https://react.dev
 - Recharts 3.10.1 (MIT). https://recharts.org
@@ -50,8 +69,10 @@
 - TypeScript (Apache-2.0)
 - Testing only (not shipped): Vitest 3.2.7 (MIT), Playwright 1.65 (Apache-2.0), axe-core (MPL-2.0)
 
+- three.js 0.169 (MIT): 3D Earth→Mars transfer view. https://threejs.org/
+
 ## Web platform APIs used (built into browsers)
-- MediaDevices.getUserMedia (camera pulse estimate), Web Bluetooth GATT Heart Rate service (0x180D / 0x2A37), Web Speech API speechSynthesis (spoken protocols), DeviceMotion (balance check).
+- MediaDevices.getUserMedia (camera pulse estimate), Web Bluetooth GATT Heart Rate service (0x180D / 0x2A37), Web Speech API speechSynthesis (spoken protocols) and SpeechRecognition (voice commands, with typed fallback), Service Worker + Web App Manifest (installable offline app), WebGL (3D view), DeviceMotion (balance check).
 
 ## Fonts (bundled, no CDN)
 - Inter (variable) by Rasmus Andersson / The Inter Project Authors, SIL Open Font License 1.1, via @fontsource-variable/inter 5.3.0. https://rsms.me/inter/
@@ -66,3 +87,5 @@
 - mulberry32 PRNG (public-domain algorithm).
 - Median absolute deviation (MAD) robust statistics; exponentially weighted moving average (EWMA).
 - Remote photoplethysmography (green-channel pulse estimation) with a direct discrete Fourier transform; RMSSD heart-rate variability.
+- Bland–Altman agreement analysis (bias and 95% limits of agreement) for sensor validation.
+- Kepler's equation (Newton iteration) for position along the transfer ellipse in the 3D view.

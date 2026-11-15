@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, Eye, Footprints, Lock, Timer, Undo2 } from 'lucide-react'
+import { PVT_B, PHQ2_ITEMS, PHQ2_OPTIONS, phq2Positive } from '../data/clinical'
+import { Activity, ChevronRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, Eye, Footprints, Lock, Timer, Undo2 } from 'lucide-react'
 import { INDICATORS, IND, type IndicatorId } from '../data/domain'
 import { useHalo } from '../state/store'
 import { Illustrative, Panel, Prov, StatePill, Seg, lens } from '../ui/kit'
-import { SensorsPanel } from './Sensors'
 
 export function LogView() {
   const h = useHalo()
@@ -53,7 +53,11 @@ export function LogView() {
         </Panel>
       </div>
 
-      <SensorsPanel />
+      <button onClick={() => h.go('sensors')} className="focus-ring tap panel flex w-full items-center gap-3 p-4 text-left hover:border-white/15" data-goto-sensors>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal/10 text-teal"><Activity size={18} aria-hidden /></span>
+        <span className="min-w-0 flex-1"><span className="block text-sm font-medium">Sensors &amp; validation</span><span className="block text-xs text-ink-mute">Camera pulse, Bluetooth strap and Bland–Altman agreement now have their own page.</span></span>
+        <ChevronRight size={16} className="text-ink-mute" aria-hidden />
+      </button>
 
       <div className="grid gap-5 xl:grid-cols-3">
         <PvtTest />
@@ -103,11 +107,42 @@ function Journal() {
         <button className="btn-ghost" type="submit">Save</button>
       </form>
       <ul className="mt-3 space-y-1.5">{mine.map((j, k) => <li key={k} className="text-sm text-ink-soft"><span className="num mr-2 text-xs text-ink-mute">D{j.day}</span>{j.text}</li>)}{mine.length === 0 && <li className="text-xs text-ink-mute">No entries yet.</li>}</ul>
+      <Phq2 />
     </Panel>
   )
 }
 
-/* F12: Psychomotor-vigilance-style reaction test */
+/** PHQ-2: validated two-item depression screen (Kroenke et al. 2003). Positive at ≥3; a screen, never a diagnosis. */
+function Phq2() {
+  const h = useHalo()
+  const [a, setA] = useState<(number | null)[]>([null, null])
+  const score = a[0] != null && a[1] != null ? (a[0] as number) + (a[1] as number) : null
+  return (
+    <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3" data-phq2>
+      <div className="flex flex-wrap items-center justify-between gap-2"><div className="text-sm font-medium">Validated screen: PHQ-2</div><Prov ids={['phq2']} /></div>
+      <p className="mt-1 text-[11px] text-ink-mute">Over the last 2 weeks, how often have you been bothered by…</p>
+      {PHQ2_ITEMS.map((q, i) => (
+        <fieldset key={q} className="mt-2">
+          <legend className="text-xs text-ink-soft">{i + 1}. {q}</legend>
+          <div className="mt-1 grid grid-cols-2 gap-1 sm:grid-cols-4">
+            {PHQ2_OPTIONS.map((o, v) => (
+              <button key={o} type="button" aria-pressed={a[i] === v} onClick={() => setA((x) => x.map((y, k) => (k === i ? v : y)))}
+                className={`focus-ring tap rounded-lg border px-2 py-1.5 text-[11px] ${a[i] === v ? 'border-teal bg-teal/15 text-ink' : 'border-white/10 text-ink-soft hover:bg-white/[0.04]'}`}>{o} <span className="num text-ink-mute">({v})</span></button>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+      {score != null && (
+        <div className={`mt-3 rounded-xl border p-2.5 text-xs ${phq2Positive(score) ? 'border-warn/40 bg-warn/[0.07]' : 'border-ok/25 bg-ok/[0.05]'}`} role="status">
+          <b className="num">Score {score}/6.</b> {phq2Positive(score) ? 'Positive screen (≥3). This is not a diagnosis: HALO suggests a private conversation with the behavioural-health team.' : 'Negative screen (<3). Keep checking in.'}
+          {phq2Positive(score) && <button className="btn-ghost ml-2 px-2 py-1 text-[11px]" onClick={() => { h.sendGround(`Private: crew member requests behavioural-health conversation (PHQ-2 positive, D${h.day})`, 'note'); h.pushToast('Private request queued', 'Only the behavioural-health team sees it.', 'ok') }}>Request private session</button>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* F12: Brief Psychomotor Vigilance Test (PVT-B protocol: ISI 2–5 s, lapse ≥355 ms, false start <100 ms) */
 function PvtTest() {
   const h = useHalo()
   const [dur, setDur] = useState<'30' | '120' | '180'>('30')
@@ -125,7 +160,7 @@ function PvtTest() {
       startAt.current = performance.now(); setPhase('go')
       const tick = () => { setMs(Math.round(performance.now() - startAt.current)); raf.current = requestAnimationFrame(tick) }
       raf.current = requestAnimationFrame(tick)
-    }, 2000 + Math.random() * (dur === '30' ? 3000 : 8000))
+    }, PVT_B.isiMinMs + Math.random() * (PVT_B.isiMaxMs - PVT_B.isiMinMs))
   }
   const start = () => { setRts([]); setFalse(0); endAt.current = performance.now() + Number(dur) * 1000; schedule() }
   const press = () => {
@@ -133,25 +168,28 @@ function PvtTest() {
     if (phase !== 'go') return
     clear()
     const rt = Math.round(performance.now() - startAt.current)
+    if (rt < PVT_B.falseStartMs) { setFalse((f) => f + 1); schedule(); return }
     setRts((r) => [...r, rt]); setMs(rt); schedule()
   }
   const mean = rts.length ? Math.round(rts.reduce((a, b) => a + b, 0) / rts.length) : 0
-  const lapses = rts.filter((r) => r > 500).length
+  const lapses = rts.filter((r) => r >= PVT_B.lapseMs).length
+  const speed = rts.length ? (rts.reduce((a, b) => a + 1000 / b, 0) / rts.length).toFixed(2) : '—'
+  const official = dur === '180'
   return (
-    <Panel title="Reaction test" kicker="Alertness · PVT-style" right={<Prov ids={['bodyInSpace']} />}>
-      <p className="text-xs text-ink-soft">NASA uses a short self-test of vigilance and attention to see how fatigue affects performance. Tap the pad as soon as the counter appears.</p>
+    <Panel title="Reaction test (PVT-B)" kicker="Alertness · NASA Reaction Self-Test protocol" right={<Prov ids={['spinoffRst', 'pvtB']} />}>
+      <p className="text-xs text-ink-soft">NASA flies a 3-minute Psychomotor Vigilance Test on the ISS as the Reaction Self-Test. HALO uses the same scoring: stimulus every 2–5 s, a <b>lapse</b> is a response of 355 ms or more, and a response under 100 ms is a false start. Tap as soon as the counter appears.</p>
       <div className="mt-2"><Seg label="Test length" size="sm" value={dur} onChange={setDur} options={[{ v: '30', label: '30 s demo' }, { v: '120', label: '2 min' }, { v: '180', label: '3 min' }]} /></div>
       <button onClick={phase === 'idle' || phase === 'done' ? start : press} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); phase === 'idle' || phase === 'done' ? start() : press() } }}
         className={`focus-ring mt-3 flex h-36 w-full select-none flex-col items-center justify-center rounded-2xl border text-center transition-colors ${phase === 'go' ? 'border-teal bg-teal/15' : phase === 'wait' ? 'border-white/10 bg-space-900' : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'}`} aria-live="polite" data-pvt>
         {phase === 'idle' && <><Timer className="text-teal" aria-hidden /><span className="mt-2 text-sm">Start test</span></>}
         {phase === 'wait' && <span className="text-sm text-ink-mute">Wait for it… (tap only when numbers appear)</span>}
         {phase === 'go' && <span className="num text-4xl font-semibold text-teal">{ms}</span>}
-        {phase === 'done' && <><span className="num text-3xl font-semibold">{mean || '—'} ms</span><span className="mt-1 text-xs text-ink-mute">mean · {rts.length} responses · {lapses} lapses (&gt;500 ms) · {falseStarts} false starts</span></>}
+        {phase === 'done' && <><span className="num text-3xl font-semibold">{mean || '—'} ms</span><span className="mt-1 text-xs text-ink-mute">mean · {rts.length} responses · {lapses} lapses (≥{PVT_B.lapseMs} ms) · {falseStarts} false starts · speed {speed}/s</span>{!official && <span className="mt-0.5 text-[10px] text-ink-mute">Practice length: only the 3-min run matches PVT-B</span>}</>}
       </button>
       {phase === 'done' && rts.length > 0 && (
-        <button className="btn-primary mt-3 w-full" onClick={() => { h.logValue('pvt', mean); h.addTest({ day: h.day, kind: 'pvt', value: mean, detail: `${mean} ms mean, ${lapses} lapses` }); h.pushToast('Reaction time logged', `${mean} ms feeds your baseline engine.`, 'ok') }}>Save to baseline</button>
+        <button className="btn-primary mt-3 w-full" onClick={() => { h.logValue('pvt', mean); h.addTest({ day: h.day, kind: 'pvt', value: mean, detail: `${mean} ms mean, ${lapses} lapses ≥${PVT_B.lapseMs} ms, ${falseStarts} false starts${official ? ' (PVT-B 3 min)' : ' (practice)'}` }); h.pushToast('Reaction time logged', `${mean} ms feeds your baseline engine.`, 'ok') }}>Save to baseline</button>
       )}
-      <div className="mt-2"><Illustrative text="Screening aid only" /></div>
+      <div className="mt-2 flex flex-wrap items-center gap-2"><Illustrative text="Screening aid only" /><Prov ids={['pvtLapse', 'pvtRst']} /></div>
     </Panel>
   )
 }

@@ -6,7 +6,9 @@
 
 **Core insight:** spaceflight shifts everyone's physiology, so population averages mislead. HALO judges each astronaut against their *own* baseline, explains every flag, and acts on its own when Earth can't respond in time.
 
-> ⚠️ Simulated crew data · fictional crew · **not a medical device** · thresholds are illustrative, not medical advice. Space-weather events are **real NASA CCMC DONKI records**.
+> ⚠️ Simulated crew data · fictional crew · **not a medical device**. Absolute thresholds come from **published clinical guidelines** (AHA, NHLBI, CDC, ADA, AASM); drift parameters and triage steps are illustrative, not medical advice. Space-weather events are **real NASA CCMC DONKI records**.
+
+**Live demo:** https://reihooneh.github.io/halo-nasa-space-apps-2026/ (installable, works offline after the first visit)
 
 ---
 
@@ -15,16 +17,16 @@
 ```bash
 npm install
 npm run dev          # http://localhost:5173
-npm test             # 36 unit tests (drift engine, triage, hash chain, scenario, sensors)
+npm test             # 46 unit tests (drift engine, guideline triage, clinical categories, hash chain, scenario, sensors, Bland–Altman, voice grammar)
 npm run build        # static site in dist/ (deploy to Netlify, Vercel or GitHub Pages)
 npm run build:single # one self-contained offline file: dist-single/index.html
-npm run e2e          # every-button end-to-end test, 101 checks (needs Chrome; CHROME=/path/to/chrome)
+npm run e2e          # every-button end-to-end test, 118 checks (needs Chrome; CHROME=/path/to/chrome)
 npm run a11y         # axe-core WCAG 2.1 A/AA audit of every view and mode
 ```
 
 `dist-single/index.html` (shipped as `halo.html`) runs by double-click, fully offline, with fonts bundled.
 
-**Deploy (free, ~2 min):** drag the `dist/` folder onto https://app.netlify.com/drop, or push the repo to GitHub and enable Pages for `dist/`. `vite.config.ts` uses `base: './'`, so any sub-path works.
+**Deploy:** every push to `main` builds and publishes to GitHub Pages via `.github/workflows/pages.yml`. `vite.config.ts` uses `base: './'`, so any sub-path works. The production build is an installable PWA (manifest + service worker).
 
 ## The 60-second demo
 
@@ -67,10 +69,18 @@ npm run a11y         # axe-core WCAG 2.1 A/AA audit of every view and mode
 | F29 | EVA Go/No-Go poll per body system | EVA & Landing Readiness |
 | F31–F33 | Storm-shelter map, Gravity Debt meter, 3-level explainer | Radiation / Forecast / Body Map |
 | F34 (part) | Spoken protocols: triage steps, shelter checklist, EVA poll, body explainer read aloud (silent fallback) | Read aloud buttons |
-| Sensors | Camera pulse estimate (on-device rPPG, demo-grade) and Bluetooth heart-rate strap with HRV, each with a labelled simulator fallback | Log & Measure |
+| Sensors | Camera pulse estimate (on-device rPPG, demo-grade) and Bluetooth heart-rate strap with HRV, each with a labelled simulator fallback | Sensors & Validation |
+| Clinical | Guideline layer: AHA BP categories and crisis rule, NHLBI low BP, CDC fever, ADA glucose levels, AASM sleep, PVT-B scoring (355 ms lapse, as in NASA's Reaction Self-Test), PHQ-2 screen. Each threshold cites its source | Clinical Reference, cards, triage |
+| Validation | Bland–Altman agreement (bias, 95% limits) between camera and strap against the ANSI ±5 bpm / ±10% band | Sensors & Validation |
+| Voice | Hands-free commands (“log heart rate 62”, “log blood pressure 118 over 76”, “open radiation”, “shelter”), speech recognition with typed fallback, `/` to open | Header mic |
+| Sol planner | Sleep and light plan on the 24 h 39 min 35 s Mars sol, drawn on the Earth clock, with crew sleep vs AASM 7 h and ISS 6.09 h | Sol Planner |
+| 3D | Interactive three.js Earth→Mars transfer (orbits to scale, Kepler timing) with the crew on the current day and the storm shell around D90; WebGL fallback | Radiation & Space Weather |
+| PWA | Installable, offline after first visit | Production build |
 | Extras | First-visit welcome card, Mission Debrief, pre-queued ground traffic, global Earth Mode, one-handed glove quick bar, mobile slim header | Everywhere |
 
-Not shown (see Roadmap in the app): voice commands, Mars-sol circadian planner, installable PWA, sensor validation study, clinical review.
+The app is organised in four numbered sections: **01 Monitor**, **02 Act**, **03 Evidence**, **04 Impact**. Every page has the same header (section, purpose, sibling pages).
+
+Still open (see *Limitations & Next Steps* in the app): validation on real astronaut or analog data, flight-surgeon review of protocols, regulatory review.
 
 ## NASA data and science (how it drives the logic)
 
@@ -90,21 +100,24 @@ src/sim/        prng.ts (mulberry32), mission.ts (seeded 4-crew, 201-day scenari
 src/engine/     drift.ts, analysis.ts, triage.ts, insights.ts (CHI, forecast, confidence), simlab.ts, blackbox.ts, sha256.ts, engine.test.ts
 src/views/      one file per screen;  src/ui/ shared kit, charts, "Why?" drawer
 scripts/build_donki.py   raw DONKI exports (data/raw/) → src/data/donki.json, no invented events
-e2e/run.mjs     Playwright end-to-end test (46 checks, screenshots in e2e/shots/)
+src/data/clinical.ts  guideline categories (AHA, NHLBI, CDC, ADA, AASM), PVT-B and PHQ-2 constants
+src/engine/agreement.ts  Bland–Altman;  src/voice/ command grammar + mic UI;  src/ui/Orbit3D.tsx three.js scene
+e2e/run.mjs     Playwright end-to-end test (118 checks, screenshots in e2e/shots/)
 ```
 
 100% client-side, no backend, no personal data. State persists in `localStorage` (wrapped in try/catch); **Reset demo** restores the start state.
 
 ## Verification
 
-- `npm test`: 36/36 unit tests pass (robust stats, persistence, adaptation, missing data, hysteresis, concern direction, population rule, triage incl. medkit and autonomy, SHA-256 vectors, tamper detection, forecast band, determinism, DONKI ID checks, dose limits, camera pulse estimator, Bluetooth packet parsing, HRV).
-- `npm run e2e`: 101/101 checks pass, clicking every button and flow in all 15 screens (sensors with Chrome's fake camera, downloads, medkit, consent, modes, welcome, debrief, full story), no horizontal overflow at 390/1024/1440/1920 px, offline load, **0 console errors**.
-- `npm run a11y`: axe-core WCAG 2.1 A + AA, **0 violations** across 26 states (every view, storm and fever days, drawers, dialogs, high contrast, glove mode, judge overlay).
+- `npm test`: 46/46 unit tests pass (robust stats, persistence, adaptation, missing data, hysteresis, concern direction, guideline rule, AHA/ADA/CDC/AASM categories, PHQ-2, triage incl. crisis, low-BP, ADA levels, medkit and autonomy, SHA-256 vectors, tamper detection, forecast band, determinism, DONKI ID checks, dose limits, camera pulse estimator, Bluetooth packet parsing, HRV, Bland–Altman, voice grammar).
+- `npm run e2e`: 118/118 checks pass, clicking every button and flow in all 18 screens (incl. PHQ-2, Bland–Altman, sol planner, 3D view, typed voice commands, PWA registration) (sensors with Chrome's fake camera, downloads, medkit, consent, modes, welcome, debrief, full story), no horizontal overflow at 390/1024/1440/1920 px, offline load, **0 console errors**.
+- `npm run a11y`: axe-core WCAG 2.1 A + AA, **0 violations** across 29 states (every view, storm and fever days, drawers, dialogs, high contrast, glove mode, judge overlay).
 
 ## Honest limitations
 
 - All crew data is simulated; the crew is fictional. The method has not been validated on real astronaut data.
-- Drift, triage, CHI weights, forecast coupling, go/no-go rules, landing weights, the Mars delay curve and the SPE dose increment (+14 vs +45 mSv) are **illustrative**. They show explainable logic, not clinical thresholds.
+- Absolute thresholds follow published guidelines (see Clinical Reference). Drift parameters, triage *steps*, CHI weights, forecast coupling, go/no-go rules, landing weights, the Mars delay curve and the SPE dose increment (+14 vs +45 mSv) are **illustrative design choices**, not flight-surgeon-approved protocols.
+- The 3D transfer uses real orbit radii but the scenario's 180-day timing, so positions are schematic.
 - The vision and balance checks are trend aids, not clinical tests. HALO gives no diagnoses and no drug doses.
 - The Simulation Lab shows sensitivity under stated assumptions, not proof.
 - The Mars delay curve over 180 days is illustrative (bounded by NASA's figures). Weekly vision/balance checks are simulated.

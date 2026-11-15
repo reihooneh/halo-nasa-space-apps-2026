@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { classify, type Tone } from '../data/clinical'
+const TONE: Record<Tone, string> = { ok: 'border-white/10 text-ink-mute', info: 'border-sky-400/30 text-sky-300', warn: 'border-warn/40 text-warn', bad: 'border-alert/50 text-alert' }
 import { motion } from 'framer-motion'
 import { AlertTriangle, ArrowRight, Award, CalendarClock, ChevronRight, Eye, Footprints, HelpCircle, Satellite, Sun, X, Zap } from 'lucide-react'
 import { ENV, IND, INDICATORS, fmtDelay, type IndicatorId, type EnvId } from '../data/domain'
@@ -198,6 +200,7 @@ function IndCard({ id, onWhy }: { id: IndicatorId; onWhy: (i: IndicatorId) => vo
   const v = h.latest[id]
   const res = h.analysis[h.crewId][id]
   const meta = STATE_META[st]
+  const cls = classify(id, v, h.latest)
   return (
     <motion.button layout onClick={() => onWhy(id)} data-card={id}
       className={`focus-ring panel tap relative overflow-hidden p-3 text-left hover:border-white/15 ${lens(h.hazard, ind.hazards)}`}
@@ -207,7 +210,7 @@ function IndCard({ id, onWhy }: { id: IndicatorId; onWhy: (i: IndicatorId) => vo
       <div className="flex items-center justify-between gap-1"><span className="truncate text-[12px] text-ink-soft">{ind.short}</span><HelpCircle size={12} className="shrink-0 text-ink-mute" aria-hidden /></div>
       <div className="mt-1 flex items-baseline gap-1"><span className="num text-[22px] font-semibold">{v ?? '—'}</span><span className="text-[11px] text-ink-mute">{ind.unit}</span></div>
       <div className="my-1.5"><Spark res={res} day={h.day} color={meta.color} /></div>
-      <StatePill state={st} small />
+      <div className="flex flex-wrap items-center gap-1"><StatePill state={st} small />{cls && <span className={`truncate rounded-full border px-1.5 py-[1px] text-[10px] ${TONE[cls.tone]}`} title="Category from published clinical guideline">{cls.label}</span>}</div>
       <span className="sr-only">. Open explanation of {ind.name.toLowerCase()}</span>
     </motion.button>
   )

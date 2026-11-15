@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+const Orbit3D = lazy(() => import('../ui/Orbit3D'))
 import { CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { CheckSquare, CloudDownload, ExternalLink, ShieldCheck, Square, Timer, Zap } from 'lucide-react'
 import { ReadAloud } from '../ui/kit'
@@ -69,6 +70,24 @@ export function RadiationView() {
           </Panel>
         </div>
       )}
+
+      <Panel title="Where the crew is" kicker="3D Earth → Mars transfer · drag to rotate" tour="orbit3d" right={<span className="chip border-white/10 text-ink-mute">Schematic timing</span>}>
+        <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+          <Suspense fallback={<div className="h-[340px] animate-pulse rounded-2xl bg-white/[0.03]" />}>
+            <Orbit3D day={h.day} reduce={h.a11y.reduce} />
+          </Suspense>
+          <div className="space-y-2 text-sm">
+            {[
+              ['Day', `${h.day} of ${MISSION_DAYS} · ${fmtDate(h.day)}`],
+              ['One-way delay', `${Math.round(h.delaySec / 60)} min ${Math.round(h.delaySec % 60)} s`],
+              ['Cruise dose rate', FACTS.cruiseDose.value],
+              ['Storm on record', `D${SPE_DAY} · 20 May 2024 (real DONKI event)`],
+            ].map(([k, v]) => <div key={k} className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2"><div className="label">{k}</div><div className="num mt-0.5 text-[13px] text-ink">{v}</div></div>)}
+            <p className="text-[11px] text-ink-mute">Orbit sizes are to scale. The scenario compresses the transfer to {MISSION_DAYS} days, so positions are schematic. Around D{SPE_DAY} the red shell shows the storm sweeping outward.</p>
+            <Prov ids={['radCruise', 'marsStorm']} />
+          </div>
+        </div>
+      </Panel>
 
       <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
         <Panel title="Cumulative dose ledger" kicker={`${env.name} · mission to date`} tour="dose" right={<><Simulated /></>}>

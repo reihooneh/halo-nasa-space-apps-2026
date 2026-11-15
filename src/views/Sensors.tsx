@@ -3,6 +3,7 @@ import { Bluetooth, BluetoothOff, Camera, CameraOff, Lock, Square } from 'lucide
 import { useHalo } from '../state/store'
 import { Illustrative, Panel, Prov } from '../ui/kit'
 import { gauss, mulberry32 } from '../sim/prng'
+import { blandAltman, type Pair } from '../engine/agreement'
 
 /* ---------- Signal processing (pure, unit-testable) ---------- */
 
@@ -66,6 +67,109 @@ export function SensorsPanel() {
   )
 }
 
+/** Broadcast a finished reading so the validation panel can pair methods. */
+const emit = (source: 'camera' | 'strap', bpm: number) => window.dispatchEvent(new CustomEvent('halo:sensor', { detail: { source, bpm } }))
+
+export function SensorsView() {
+  return (
+    <div className="space-y-5">
+      <SubHead n="1" title="Measure" text="Two real sensor paths that run in the browser. Nothing leaves the device." />
+      <SensorsPanel />
+      <SubHead n="2" title="Validate" text="Before a sensor is trusted, compare it with a reference method. HALO uses the standard Bland–Altman method and the ANSI heart-rate accuracy band." />
+      <Validation />
+    </div>
+  )
+}
+
+export function SubHead({ n, title, text }: { n: string; title: string; text: string }) {
+  return (
+    <div className="flex items-end gap-3 pt-1">
+      <span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-teal/30 bg-teal/10 text-xs font-semibold text-teal">{n}</span>
+      <div className="min-w-0"><h2 className="text-[15px] font-semibold text-ink">{title}</h2><p className="text-xs text-ink-mute">{text}</p></div>
+      <span className="mb-3 h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" aria-hidden />
+    </div>
+  )
+}
+
+function demoPairs(): Pair[] {
+  const r = mulberry32(2026)
+  return Array.from({ length: 24 }, (_, i) => {
+    const ref = Math.round(52 + r() * 46)
+    const err = gauss(r) * 2.6 + 0.8 + (i % 7 === 0 ? 7 : 0)
+    return { a: Math.round(ref + err), b: ref, label: 'simulated' }
+  })
+}
+
+function Validation() {
+  const [pairs, setPairs] = useState<Pair[]>(demoPairs)
+  const [demo, setDemo] = useState(true)
+  const [last, setLast] = useState<{ camera?: number; strap?: number }>({})
+  const [ma, setMa] = useState(''), [mb, setMb] = useState('')
+  useEffect(() => {
+    const on = (e: Event) => { const d = (e as CustomEvent).detail; setLast((l) => ({ ...l, [d.source]: d.bpm })) }
+    window.addEventListener('halo:sensor', on)
+    return () => window.removeEventListener('halo:sensor', on)
+  }, [])
+  const add = (p: Pair) => { setPairs((ps) => (demo ? [p] : [...ps, p])); setDemo(false) }
+  const r = blandAltman(pairs)
+  const W = 520, H = 260, P = { l: 44, r: 16, t: 14, b: 34 }
+  const xs = pairs.map((p) => (p.a + p.b) / 2)
+  const x0 = Math.min(40, ...xs) - 2, x1 = Math.max(110, ...xs) + 2
+  const ylim = Math.max(15, ...(r ? r.points.map((p) => Math.abs(p.diff)) : [0]), r ? Math.abs(r.loaHigh) + 2 : 0, r ? Math.abs(r.loaLow) + 2 : 0)
+  const X = (v: number) => P.l + ((v - x0) / (x1 - x0)) * (W - P.l - P.r)
+  const Y = (v: number) => P.t + ((ylim - v) / (2 * ylim)) * (H - P.t - P.b)
+  const tol = (m: number) => Math.max(5, 0.1 * m)
+  const band = Array.from({ length: 30 }, (_, i) => x0 + (i / 29) * (x1 - x0))
+  return (
+    <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]" data-validation>
+      <Panel title="Bland–Altman agreement" kicker="Camera estimate (test) vs chest strap (reference)" right={<>{demo && <Illustrative text="Simulated pairs" />}<Prov ids={['blandAltman', 'hrAccuracy']} /></>}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={r ? `Bland–Altman plot of ${r.n} pairs. Bias ${r.bias.toFixed(1)} bpm, limits of agreement ${r.loaLow.toFixed(1)} to ${r.loaHigh.toFixed(1)} bpm.` : 'Bland–Altman plot'}>
+          <path d={`M${band.map((m) => `${X(m)},${Y(tol(m))}`).join(' L')} L${band.slice().reverse().map((m) => `${X(m)},${Y(-tol(m))}`).join(' L')} Z`} fill="#2DD4BF" fillOpacity="0.07" />
+          {[-10, -5, 0, 5, 10].filter((v) => Math.abs(v) < ylim).map((v) => <g key={v}><line x1={P.l} x2={W - P.r} y1={Y(v)} y2={Y(v)} stroke="#fff" strokeOpacity={v === 0 ? 0.18 : 0.05} /><text x={P.l - 6} y={Y(v) + 3} textAnchor="end" fontSize="10" fill="#7C8AA5">{v > 0 ? '+' : ''}{v}</text></g>)}
+          {[50, 60, 70, 80, 90, 100].filter((v) => v > x0 && v < x1).map((v) => <text key={v} x={X(v)} y={H - P.b + 14} textAnchor="middle" fontSize="10" fill="#7C8AA5">{v}</text>)}
+          <text x={(W + P.l) / 2} y={H - 4} textAnchor="middle" fontSize="10.5" fill="#A9B6CC">Mean of both methods (bpm)</text>
+          <text x={12} y={(H - P.b) / 2} textAnchor="middle" fontSize="10.5" fill="#A9B6CC" transform={`rotate(-90 12 ${(H - P.b) / 2})`}>Difference, test − reference (bpm)</text>
+          {r && <>
+            <line x1={P.l} x2={W - P.r} y1={Y(r.bias)} y2={Y(r.bias)} stroke="#60A5FA" strokeWidth="1.5" />
+            <line x1={P.l} x2={W - P.r} y1={Y(r.loaHigh)} y2={Y(r.loaHigh)} stroke="#F59E0B" strokeDasharray="5 4" />
+            <line x1={P.l} x2={W - P.r} y1={Y(r.loaLow)} y2={Y(r.loaLow)} stroke="#F59E0B" strokeDasharray="5 4" />
+            <text x={W - P.r - 4} y={Y(r.bias) - 4} textAnchor="end" fontSize="10" fill="#60A5FA">bias {r.bias.toFixed(1)}</text>
+            <text x={W - P.r - 4} y={Y(r.loaHigh) - 4} textAnchor="end" fontSize="10" fill="#F59E0B">+1.96 SD {r.loaHigh.toFixed(1)}</text>
+            <text x={W - P.r - 4} y={Y(r.loaLow) + 12} textAnchor="end" fontSize="10" fill="#F59E0B">−1.96 SD {r.loaLow.toFixed(1)}</text>
+            {r.points.map((p, i) => <circle key={i} cx={X(p.mean)} cy={Y(Math.max(-ylim, Math.min(ylim, p.diff)))} r="4" fill={p.ok ? '#2DD4BF' : '#F43F5E'} fillOpacity="0.85" stroke="#0B1220" />)}
+          </>}
+        </svg>
+        <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-ink-mute">
+          <span><i className="mr-1 inline-block h-2 w-3 rounded-sm bg-teal/30 align-middle" />ANSI band ±5 bpm or ±10%</span>
+          <span><i className="mr-1 inline-block w-4 border-t-2 border-sky-400 align-middle" />mean bias</span>
+          <span><i className="mr-1 inline-block w-4 border-t-2 border-dashed border-warn align-middle" />95% limits of agreement</span>
+        </div>
+      </Panel>
+      <Panel title="Verdict" kicker={r ? `${r.n} paired readings` : 'Add pairs'}>
+        {!r && <p className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3 text-xs text-ink-soft">{pairs.length} pair so far. Need at least 2 pairs to compute bias and limits of agreement.</p>}
+        {r && <dl className="grid grid-cols-2 gap-2 text-center">
+          {[['Bias', `${r.bias >= 0 ? '+' : ''}${r.bias.toFixed(1)} bpm`], ['Limits of agreement', `${r.loaLow.toFixed(1)} to ${r.loaHigh.toFixed(1)}`], ['Mean abs. error', `${r.mae.toFixed(1)} bpm`], ['Within ANSI band', `${Math.round(r.withinSpec * 100)}%`]].map(([k, v]) => (
+            <div key={k} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-2.5"><dt className="text-[11px] text-ink-mute">{k}</dt><dd className="num mt-0.5 text-sm font-semibold">{v}</dd></div>
+          ))}
+        </dl>}
+        {r && <p className={`mt-3 rounded-xl border p-2.5 text-xs ${r.withinSpec >= 0.95 ? 'border-ok/30 bg-ok/[0.06]' : 'border-warn/40 bg-warn/[0.07]'}`} data-verdict>{r.withinSpec >= 0.95 ? 'At least 95% of readings fall inside the ANSI band: acceptable for trend monitoring.' : `Only ${Math.round(r.withinSpec * 100)}% fall inside the ANSI band. HALO would keep this sensor in “advisory” mode and prefer the reference device.`}</p>}
+        <div className="mt-3 space-y-2 text-xs">
+          <div className="label">Add a live pair</div>
+          <div className="flex flex-wrap items-center gap-2 text-ink-soft">Camera <b className="num text-ink">{last.camera ?? '—'}</b> · Strap <b className="num text-ink">{last.strap ?? '—'}</b>
+            <button className="btn-ghost px-2 py-1 text-[11px]" disabled={last.camera == null || last.strap == null} onClick={() => add({ a: last.camera!, b: last.strap! })}>Add pair</button></div>
+          <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); const a = Number(ma), b = Number(mb); if (a > 20 && b > 20) { add({ a, b }); setMa(''); setMb('') } }}>
+            <label className="sr-only" htmlFor="ba-a">Test reading</label><input id="ba-a" inputMode="numeric" value={ma} onChange={(e) => setMa(e.target.value)} placeholder="test bpm" className="focus-ring w-20 rounded-lg border border-white/10 bg-space-900 px-2 py-1" />
+            <label className="sr-only" htmlFor="ba-b">Reference reading</label><input id="ba-b" inputMode="numeric" value={mb} onChange={(e) => setMb(e.target.value)} placeholder="ref bpm" className="focus-ring w-20 rounded-lg border border-white/10 bg-space-900 px-2 py-1" />
+            <button className="btn-ghost px-2 py-1 text-[11px]" type="submit" data-ba-add>Add manual pair</button>
+            {!demo && <button type="button" className="btn-ghost px-2 py-1 text-[11px]" onClick={() => { setPairs(demoPairs()); setDemo(true) }}>Restore demo set</button>}
+          </form>
+          <p className="text-[11px] text-ink-mute">Your first real pair replaces the simulated set. Use the strap as the reference because chest-strap ECG is the usual criterion device.</p>
+        </div>
+      </Panel>
+    </div>
+  )
+}
+
 function Trace({ data, color = '#2DD4BF' }: { data: number[]; color?: string }) {
   if (data.length < 2) return <div className="h-14 rounded-xl bg-white/[0.02]" aria-hidden />
   const lo = Math.min(...data), hi = Math.max(...data)
@@ -122,7 +226,7 @@ function CameraPulse() {
           setEst(estimateBpm(ts.current.slice(k0), gs.current.slice(k0)))
         }
       }
-      if (el >= 20) { setEst(estimateBpm(ts.current, gs.current)); stop(); setState('done'); return }
+      if (el >= 20) { const fin = estimateBpm(ts.current, gs.current); setEst(fin); if (fin.bpm != null) emit('camera', fin.bpm); stop(); setState('done'); return }
       raf.current = requestAnimationFrame(step)
     }
     raf.current = requestAnimationFrame(step)
@@ -218,6 +322,7 @@ function BleStrap() {
   const cur = hrs.at(-1)
   const sorted = [...hrs].sort((a, b) => a - b)
   const med = sorted.length ? sorted[Math.floor(sorted.length / 2)] : null
+  useEffect(() => { if (med != null && hrs.length >= 10 && hrs.length % 10 === 0) emit('strap', med) }, [med, hrs.length])
   const hrv = rmssd(rrs)
   return (
     <Panel title="Bluetooth heart-rate strap" kicker="Standard GATT Heart Rate service" right={<Prov ids={['hrpRisks']} />}>

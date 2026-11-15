@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Activity, BookOpen, Box, Gauge, Globe2, HeartPulse, LayoutDashboard, LineChart, Pause, Play, Radio, RotateCcw, Satellite, Settings2,
-  ShieldAlert, Stethoscope, Sun, Users, FlaskConical, Compass, FileText, Sparkles, X, Rewind, Rocket, SlidersHorizontal, Zap, PencilLine,
+  ShieldAlert, ShieldCheck, Moon, Waves, Stethoscope, Sun, Users, FlaskConical, Compass, FileText, Sparkles, X, Rewind, Rocket, SlidersHorizontal, Zap, PencilLine,
 } from 'lucide-react'
 import { HAZARDS, ENVIRONMENTS, ENV, fmtDelay, type HazardId } from './data/domain'
 import { useHalo, DEFAULT_DAY, type ViewId } from './state/store'
@@ -24,30 +24,44 @@ import { SourcesView } from './views/Sources'
 import { NextView } from './views/Next'
 import { ReadinessView } from './views/Readiness'
 import { JudgeTour } from './views/Judge'
+import { SensorsView } from './views/Sensors'
+import { SolView } from './views/Sol'
+import { ClinicalView } from './views/Clinical'
+import { VoiceButton } from './voice/VoiceButton'
 
-type NavItem = { id: ViewId; label: string; earth?: string; Icon: typeof Activity; group: string }
+type NavItem = { id: ViewId; label: string; earth?: string; Icon: typeof Activity; group: string; blurb: string }
+export const GROUPS: Record<string, { n: string; text: string }> = {
+  Monitor: { n: '01', text: 'See the crew’s health' },
+  Act: { n: '02', text: 'Decide and respond' },
+  Evidence: { n: '03', text: 'Why you can trust it' },
+  Impact: { n: '04', text: 'Beyond the mission' },
+}
 const NAV: NavItem[] = [
-  { id: 'console', label: 'Mission Console', earth: 'Care Console', Icon: LayoutDashboard, group: 'Monitor' },
-  { id: 'body', label: 'Body Map', Icon: HeartPulse, group: 'Monitor' },
-  { id: 'log', label: 'Log & Measure', Icon: Activity, group: 'Monitor' },
-  { id: 'insights', label: 'Drift & Forecast', Icon: LineChart, group: 'Monitor' },
-  { id: 'radiation', label: 'Radiation & Space Weather', Icon: Sun, group: 'Monitor' },
-  { id: 'triage', label: 'Autonomous Triage', earth: 'Offline Triage', Icon: Stethoscope, group: 'Act' },
-  { id: 'readiness', label: 'EVA & Landing Readiness', earth: 'Fitness-for-task', Icon: Rocket, group: 'Act' },
-  { id: 'ground', label: 'Ground Link', earth: 'Specialist Link', Icon: Satellite, group: 'Act' },
-  { id: 'packet', label: 'Flight Surgeon Packet', earth: 'Specialist Packet', Icon: FileText, group: 'Act' },
-  { id: 'crew', label: 'Crew Pulse', earth: 'Team Pulse', Icon: Users, group: 'Act' },
-  { id: 'lab', label: 'Simulation Lab', Icon: FlaskConical, group: 'Trust' },
-  { id: 'blackbox', label: 'Health Black Box', Icon: Box, group: 'Trust' },
-  { id: 'sources', label: 'Science & Sources', Icon: BookOpen, group: 'Trust' },
-  { id: 'earth', label: 'Earth Mode', Icon: Globe2, group: 'Impact' },
-  { id: 'next', label: 'Roadmap', Icon: Compass, group: 'Impact' },
+  { id: 'console', label: 'Mission Console', earth: 'Care Console', Icon: LayoutDashboard, group: 'Monitor', blurb: 'One screen: who needs attention, why, and what to do next.' },
+  { id: 'body', label: 'Body Map', Icon: HeartPulse, group: 'Monitor', blurb: 'Seven body systems, each linked to NASA risks and today’s readings.' },
+  { id: 'log', label: 'Log & Measure', Icon: Activity, group: 'Monitor', blurb: 'One-tap logging and short tests: reaction (PVT-B), vision, balance, mood (PHQ-2).' },
+  { id: 'sensors', label: 'Sensors & Validation', Icon: Waves, group: 'Monitor', blurb: 'Camera pulse and Bluetooth strap, checked against each other with Bland–Altman.' },
+  { id: 'insights', label: 'Drift & Forecast', Icon: LineChart, group: 'Monitor', blurb: 'Personal-baseline drift, 7-day forecast and what-if countermeasures.' },
+  { id: 'radiation', label: 'Radiation & Space Weather', Icon: Sun, group: 'Monitor', blurb: 'Dose ledger, real NASA DONKI storms and a 3D view of the transfer.' },
+  { id: 'triage', label: 'Autonomous Triage', earth: 'Offline Triage', Icon: Stethoscope, group: 'Act', blurb: 'Guideline-based, explainable rules that act when Earth is too far away.' },
+  { id: 'readiness', label: 'EVA & Landing Readiness', earth: 'Fitness-for-task', Icon: Rocket, group: 'Act', blurb: 'Go/No-Go for spacewalks and a landing-readiness score with handoff report.' },
+  { id: 'sol', label: 'Sol Planner', earth: 'Shift Planner', Icon: Moon, group: 'Act', blurb: 'Sleep and light plan on the 24 h 39 min Mars day.' },
+  { id: 'ground', label: 'Ground Link', earth: 'Specialist Link', Icon: Satellite, group: 'Act', blurb: 'Messages that obey the real light-time delay.' },
+  { id: 'packet', label: 'Flight Surgeon Packet', earth: 'Specialist Packet', Icon: FileText, group: 'Act', blurb: 'A one-page summary ready to downlink, print or export.' },
+  { id: 'crew', label: 'Crew Pulse', earth: 'Team Pulse', Icon: Users, group: 'Act', blurb: 'Whole-crew view with consent-based privacy.' },
+  { id: 'clinical', label: 'Clinical Reference', Icon: ShieldCheck, group: 'Evidence', blurb: 'Every threshold, the guideline it comes from, and the NASA data behind HALO.' },
+  { id: 'lab', label: 'Simulation Lab', Icon: FlaskConical, group: 'Evidence', blurb: '1,000 seeded missions: how early does personal drift beat a fixed rule?' },
+  { id: 'blackbox', label: 'Health Black Box', Icon: Box, group: 'Evidence', blurb: 'Tamper-evident, hash-chained record of every reading and decision.' },
+  { id: 'sources', label: 'Science & Sources', Icon: BookOpen, group: 'Evidence', blurb: 'Every number with its source.' },
+  { id: 'next', label: 'Limitations & Next Steps', Icon: Compass, group: 'Evidence', blurb: 'What HALO can’t claim yet, and what would make it flight-ready.' },
+  { id: 'earth', label: 'Earth Mode', Icon: Globe2, group: 'Impact', blurb: 'The same engine for remote clinics, Antarctic stations and home care.' },
 ]
 
 const VIEWS: Record<ViewId, () => ReactNode> = {
   console: () => <ConsoleView />, body: () => <BodyView />, log: () => <LogView />, insights: () => <InsightsView />, radiation: () => <RadiationView />,
   ground: () => <GroundView />, triage: () => <TriageView />, packet: () => <PacketView />, crew: () => <CrewView />, lab: () => <LabView />,
   blackbox: () => <BlackBoxView />, earth: () => <EarthView />, sources: () => <SourcesView />, next: () => <NextView />, readiness: () => <ReadinessView />,
+  sensors: () => <SensorsView />, sol: () => <SolView />, clinical: () => <ClinicalView />,
 }
 
 export default function App() {
@@ -80,7 +94,7 @@ export default function App() {
         <div className="mt-5 flex-1 space-y-4 overflow-y-auto scroll-thin pr-1">
           {groups.map((g) => (
             <div key={g}>
-              <div className="label px-2 pb-1.5">{g}</div>
+              <div className="label flex items-baseline gap-1.5 px-2 pb-1.5"><span className="num text-teal/80">{GROUPS[g].n}</span>{g}<span className="ml-auto truncate text-[9.5px] normal-case tracking-normal text-ink-mute">{GROUPS[g].text}</span></div>
               <ul className="space-y-0.5">
                 {NAV.filter((n) => n.group === g).map((n) => (
                   <li key={n.id}>
@@ -113,11 +127,12 @@ export default function App() {
                 {h.autonomy === 'autonomous' ? 'Autonomous mode' : h.autonomy === 'delayed' ? 'Delayed assist' : `${h.t('ground')[0].toUpperCase()}${h.t('ground').slice(1)}-linked`}
               </span>
             </div>
-            <span className="num whitespace-nowrap rounded-lg bg-white/[0.04] px-2 py-1 text-xs text-ink md:hidden">D{String(h.day).padStart(3, '0')}</span>
+            <span className="num hidden whitespace-nowrap rounded-lg bg-white/[0.04] px-2 py-1 text-xs text-ink sm:inline md:hidden">D{String(h.day).padStart(3, '0')}</span>
             <div className="ml-auto flex items-center gap-1.5 md:gap-2">
               <button className={`${h.playing ? 'btn-ghost' : 'btn-primary'} px-3 md:hidden`} onClick={playMain} aria-label={h.playing ? 'Pause story' : 'Play the 60-second story'}>{h.playing ? <Pause size={16} /> : <Play size={16} />}</button>
               <button className="btn-ghost px-3 md:hidden" aria-expanded={mobileOpen} aria-controls="mobile-controls" aria-label="Show mission controls" onClick={() => setMobileOpen((o) => !o)}><SlidersHorizontal size={16} /></button>
               <button className="btn-ghost hidden md:inline-flex" onClick={() => h.setJudge(true)} aria-label="Start Judge Mode tour"><Sparkles size={15} aria-hidden /><span className="hidden xl:inline">Judge Mode</span></button>
+              <VoiceButton />
               <div className="relative">
                 <button className="btn-ghost px-3" aria-expanded={settings} aria-label="Display and accessibility settings" onClick={() => setSettings((s) => !s)}><Settings2 size={15} aria-hidden /></button>
                 {settings && <SettingsPop onClose={() => setSettings(false)} />}
@@ -161,22 +176,23 @@ export default function App() {
         <main id="main" className="flex-1 px-3 py-5 md:px-6" tabIndex={-1}>
           <AnimatePresence mode="wait">
             <motion.div key={h.view} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2, ease: 'easeOut' }}>
+              {h.view !== 'console' && <PageHeader item={NAV.find((n) => n.id === h.view)!} label={label} />}
               {VIEWS[h.view]()}
             </motion.div>
           </AnimatePresence>
         </main>
 
         <nav aria-label="Sections" className="no-print sticky bottom-0 z-30 flex gap-1 overflow-x-auto border-t border-white/[0.06] bg-space-950/95 px-2 py-2 backdrop-blur lg:hidden scroll-thin">
-          {NAV.map((n) => (
-            <button key={n.id} onClick={() => h.go(n.id)} aria-current={h.view === n.id ? 'page' : undefined} className={`focus-ring tap flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs ${h.view === n.id ? 'bg-teal/10 text-teal' : 'text-ink-soft'}`}>
+          {NAV.map((n, i) => (<span key={n.id} className="contents">{i > 0 && NAV[i - 1].group !== n.group && <span className="mx-1 my-1 w-px shrink-0 bg-white/10" aria-hidden />}
+            <button onClick={() => h.go(n.id)} aria-current={h.view === n.id ? 'page' : undefined} className={`focus-ring tap flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs ${h.view === n.id ? 'bg-teal/10 text-teal' : 'text-ink-soft'}`}>
               <n.Icon size={14} aria-hidden />{label(n)}
-            </button>
+            </button></span>
           ))}
         </nav>
 
         <footer className="no-print border-t border-white/[0.06] px-4 py-3 text-[11.5px] text-ink-mute md:px-6">
           <span className="font-medium text-ink-soft">Powered by NASA data</span> · NASA HRP hazards & risks, NASA-STD-3001, NASA CCMC DONKI space weather, CSA radiation research ·
-          <span className="text-warn"> Simulated crew data · Not a medical device · Thresholds illustrative, not medical advice</span> · Fictional crew ·
+          <span className="text-warn"> Simulated crew data · Not a medical device · Thresholds from published guidelines (AHA, CDC, ADA, AASM); protocols illustrative</span> · Fictional crew ·
           <span className="hidden md:inline"> Keys: <Kbd>Space</Kbd> play · <Kbd>←</Kbd><Kbd>→</Kbd> day · <Kbd>J</Kbd> judge tour</span>
         </footer>
       </div>
@@ -302,6 +318,30 @@ function Toast() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+function PageHeader({ item, label }: { item: NavItem; label: (n: NavItem) => string }) {
+  const h = useHalo()
+  const sec = NAV.filter((n) => n.group === item.group)
+  const g = GROUPS[item.group]
+  return (
+    <div className="mb-5 flex flex-wrap items-end gap-x-6 gap-y-3" data-page-header>
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="hero-icon relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"><item.Icon size={20} aria-hidden /></span>
+        <div className="min-w-0">
+          <div className="label flex items-center gap-1.5"><span className="num text-teal">{g.n}</span><span>{item.group}</span><span className="text-ink-mute/60">·</span><span className="normal-case tracking-normal">{g.text}</span></div>
+          <h1 className="text-xl font-semibold tracking-tight text-ink md:text-[22px]">{label(item)}</h1>
+          <p className="text-[13px] text-ink-soft">{item.blurb}</p>
+        </div>
+      </div>
+      <div className="ml-auto hidden flex-wrap gap-1 md:flex" role="navigation" aria-label={`${item.group} pages`}>
+        {sec.map((n) => (
+          <button key={n.id} onClick={() => h.go(n.id)} aria-current={n.id === item.id ? 'page' : undefined}
+            className={`focus-ring tap rounded-full border px-2.5 py-1 text-[11.5px] transition-colors ${n.id === item.id ? 'border-teal/40 bg-teal/10 text-teal' : 'border-white/10 text-ink-mute hover:border-white/20 hover:text-ink'}`}>{label(n)}</button>
+        ))}
+      </div>
     </div>
   )
 }

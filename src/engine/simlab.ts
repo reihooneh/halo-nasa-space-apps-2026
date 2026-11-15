@@ -15,7 +15,7 @@ export const SIMLAB_ASSUMPTIONS = {
   driftDepth: [1.2, 2.6], // hours lost at the bottom of the decline
   driftLength: [18, 35], // days to reach the bottom
   missingRate: 0.03,
-  populationThreshold: 5.0, // illustrative fixed cut-off (h)
+  populationThreshold: 6.0, // AASM/SRS consensus: 6 h or fewer is inadequate (fixed guideline cut-off)
   persistence: 3,
 }
 

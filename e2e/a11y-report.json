@@ -1,0 +1,118 @@
+[
+ {
+  "name": "welcome dialog",
+  "violations": []
+ },
+ {
+  "name": "view console",
+  "violations": []
+ },
+ {
+  "name": "view body",
+  "violations": []
+ },
+ {
+  "name": "view log",
+  "violations": []
+ },
+ {
+  "name": "view insights",
+  "violations": []
+ },
+ {
+  "name": "view radiation",
+  "violations": []
+ },
+ {
+  "name": "view triage",
+  "violations": []
+ },
+ {
+  "name": "view readiness",
+  "violations": []
+ },
+ {
+  "name": "view ground",
+  "violations": []
+ },
+ {
+  "name": "view packet",
+  "violations": []
+ },
+ {
+  "name": "view crew",
+  "violations": []
+ },
+ {
+  "name": "view lab",
+  "violations": []
+ },
+ {
+  "name": "view blackbox",
+  "violations": []
+ },
+ {
+  "name": "view sources",
+  "violations": []
+ },
+ {
+  "name": "view earth",
+  "violations": []
+ },
+ {
+  "name": "view next",
+  "violations": []
+ },
+ {
+  "name": "view sensors",
+  "violations": []
+ },
+ {
+  "name": "view sol",
+  "violations": []
+ },
+ {
+  "name": "view clinical",
+  "violations": []
+ },
+ {
+  "name": "radiation during storm (D90)",
+  "violations": []
+ },
+ {
+  "name": "triage urgent (D157)",
+  "violations": []
+ },
+ {
+  "name": "console + debrief (D180)",
+  "violations": []
+ },
+ {
+  "name": "why drawer",
+  "violations": []
+ },
+ {
+  "name": "settings popover",
+  "violations": []
+ },
+ {
+  "name": "high contrast: console",
+  "violations": []
+ },
+ {
+  "name": "high contrast: body",
+  "violations": []
+ },
+ {
+  "name": "high contrast: radiation",
+  "violations": []
+ },
+ {
+  "name": "glove mode: console",
+  "violations": []
+ },
+ {
+  "name": "judge tour overlay",
+  "violations": []
+ }
+]

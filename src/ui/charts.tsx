@@ -36,8 +36,8 @@ export function IndicatorChart({ res, ind, day, window = 60, height = 220, showP
           />
           <Area dataKey="band" stroke="none" fill="#2DD4BF" fillOpacity={0.09} isAnimationActive={false} />
           <Line dataKey="c" stroke="#2DD4BF" strokeOpacity={0.6} strokeDasharray="4 4" dot={false} strokeWidth={1.2} isAnimationActive={false} />
-          {showPop && pop.low != null && <ReferenceLine y={pop.low} stroke="#A9B6CC" strokeOpacity={0.45} strokeDasharray="2 6" label={{ value: `population ${pop.low}`, fill: '#A9B6CC', fontSize: 10, position: 'insideBottomRight' }} />}
-          {showPop && pop.high != null && <ReferenceLine y={pop.high} stroke="#A9B6CC" strokeOpacity={0.45} strokeDasharray="2 6" label={{ value: `population ${pop.high}`, fill: '#A9B6CC', fontSize: 10, position: 'insideTopRight' }} />}
+          {showPop && pop.low != null && <ReferenceLine y={pop.low} stroke="#A9B6CC" strokeOpacity={0.45} strokeDasharray="2 6" label={{ value: `${meta.guideline.kind === "guideline" ? "guideline" : "fixed"} ${pop.low}`, fill: '#A9B6CC', fontSize: 10, position: 'insideBottomRight' }} />}
+          {showPop && pop.high != null && <ReferenceLine y={pop.high} stroke="#A9B6CC" strokeOpacity={0.45} strokeDasharray="2 6" label={{ value: `${meta.guideline.kind === "guideline" ? "guideline" : "fixed"} ${pop.high}`, fill: '#A9B6CC', fontSize: 10, position: 'insideTopRight' }} />}
           {markers.filter((m) => m.day >= dayOfIdx(i0) && m.day <= day).map((m) => (
             <ReferenceLine key={m.day + m.label} x={m.day} stroke={m.color} strokeOpacity={0.7} label={{ value: m.label, fill: m.color, fontSize: 10, position: 'insideTopLeft' }} />
           ))}

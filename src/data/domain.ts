@@ -176,8 +176,10 @@ export interface Indicator {
   concern: Direction
   systems: SystemId[]
   hazards: HazardId[]
-  /** illustrative population threshold used for comparison (not medical advice) */
+  /** fixed population threshold used for comparison: from a published guideline where one exists (see `guideline`) */
   population: { low?: number; high?: number }
+  /** the published guideline the population threshold comes from; `design` = no guideline exists, HALO design value */
+  guideline: { text: string; sources: string[]; kind: 'guideline' | 'design' }
   howTo: [string, string, string]
   why: string
   quick: number[]
@@ -185,33 +187,33 @@ export interface Indicator {
 }
 
 export const INDICATORS: Indicator[] = [
-  { id: 'hr', name: 'Resting heart rate', short: 'Heart rate', unit: 'bpm', decimals: 0, concern: 'both', systems: ['cardio'], hazards: ['gravity', 'distance', 'hostile'], population: { low: 45, high: 100 },
+  { id: 'hr', name: 'Resting heart rate', short: 'Heart rate', unit: 'bpm', decimals: 0, concern: 'both', systems: ['cardio'], hazards: ['gravity', 'distance', 'hostile'], population: { high: 100 }, guideline: { text: 'AHA: 60–100 bpm is a normal resting rate; above 100 is tachycardia. Very fit people can rest near 40, so HALO does not flag low rates by population, only against your own baseline.', sources: ['mayoHr'], kind: 'guideline' },
     howTo: ['Sit still for 2 minutes after waking.', 'Place two fingers on your wrist or use the cuff/strap.', 'Count beats for 30 seconds and double it.'],
     why: 'Cardiovascular adaptation to weightlessness; also rises with fever, stress and poor sleep.', quick: [52, 58, 64, 70, 78, 88], sources: ['hrpRisks'] },
-  { id: 'sbp', name: 'Blood pressure (systolic)', short: 'BP sys', unit: 'mmHg', decimals: 0, concern: 'both', systems: ['cardio'], hazards: ['gravity'], population: { low: 90, high: 140 },
+  { id: 'sbp', name: 'Blood pressure (systolic)', short: 'BP sys', unit: 'mmHg', decimals: 0, concern: 'both', systems: ['cardio'], hazards: ['gravity'], population: { low: 90, high: 140 }, guideline: { text: 'AHA: stage 2 hypertension ≥140, hypertensive crisis >180. NHLBI: low blood pressure below 90/60.', sources: ['ahaBp', 'nhlbiLowBp'], kind: 'guideline' },
     howTo: ['Sit with your arm supported at heart level.', 'Wrap the cuff on bare upper arm, 2 cm above the elbow.', 'Stay silent and still while it inflates; log both numbers.'],
     why: 'Fluid shifts and vascular changes alter blood pressure regulation.', quick: [100, 108, 114, 120, 128, 136], sources: ['hrpRisks', 'hazGravity'] },
-  { id: 'dbp', name: 'Blood pressure (diastolic)', short: 'BP dia', unit: 'mmHg', decimals: 0, concern: 'both', systems: ['cardio'], hazards: ['gravity'], population: { low: 60, high: 90 },
+  { id: 'dbp', name: 'Blood pressure (diastolic)', short: 'BP dia', unit: 'mmHg', decimals: 0, concern: 'both', systems: ['cardio'], hazards: ['gravity'], population: { low: 60, high: 90 }, guideline: { text: 'AHA: stage 2 hypertension ≥90, crisis >120. NHLBI: low blood pressure below 60 diastolic.', sources: ['ahaBp', 'nhlbiLowBp'], kind: 'guideline' },
     howTo: ['Take with the systolic reading.', 'Use the lower number on the cuff display.', 'Repeat once if the first reading seems off.'],
     why: 'Paired with systolic to track vascular adaptation.', quick: [64, 70, 74, 78, 82, 88], sources: ['hrpRisks'] },
-  { id: 'temp', name: 'Body temperature', short: 'Temp', unit: '°C', decimals: 1, concern: 'high', systems: ['immune'], hazards: ['hostile', 'distance'], population: { high: 38.0 },
+  { id: 'temp', name: 'Body temperature', short: 'Temp', unit: '°C', decimals: 1, concern: 'high', systems: ['immune'], hazards: ['hostile', 'distance'], population: { high: 38.0 }, guideline: { text: 'CDC: fever is a measured temperature of 38.0 °C (100.4 °F) or greater.', sources: ['cdcFever'], kind: 'guideline' },
     howTo: ['Measure before eating or drinking.', 'Place the probe under the tongue (or use the ear/forehead sensor).', 'Wait for the beep and log the value.'],
     why: 'Early sign of infection; immune changes in closed habitats.', quick: [36.4, 36.6, 36.8, 37.0, 37.4, 38.0], sources: ['hazHostile', 'hrpRisks'] },
-  { id: 'glucose', name: 'Blood glucose', short: 'Glucose', unit: 'mg/dL', decimals: 0, concern: 'both', systems: ['cardio'], hazards: ['distance', 'gravity'], population: { low: 70, high: 140 },
+  { id: 'glucose', name: 'Blood glucose', short: 'Glucose', unit: 'mg/dL', decimals: 0, concern: 'both', systems: ['cardio'], hazards: ['distance', 'gravity'], population: { low: 70, high: 180 }, guideline: { text: 'ADA: level 1 low 54–69, level 2 low <54 mg/dL; time-in-range 70–180; above 180 is level 1 high, above 250 level 2.', sources: ['adaGlucose', 'adaTir'], kind: 'guideline' },
     howTo: ['Wash and dry hands; prepare a test strip (or read your continuous glucose sensor).', 'Use the lancet on the side of a fingertip.', 'Touch the strip to the drop and log the reading.'],
     why: 'Metabolic health under reduced activity and changed diet. Continuous glucose monitors were validated aboard the ISS in 2025 (Ax-4), and CSA notes space research informs Type 2 diabetes studies on Earth.', quick: [82, 90, 96, 104, 115, 130], sources: ['axiomCgm', 'csaWhy'] },
-  { id: 'sleep', name: 'Sleep', short: 'Sleep', unit: 'h', decimals: 1, concern: 'low', systems: ['sleep', 'brain'], hazards: ['isolation', 'hostile'], population: { low: 5.0 },
+  { id: 'sleep', name: 'Sleep', short: 'Sleep', unit: 'h', decimals: 1, concern: 'low', systems: ['sleep', 'brain'], hazards: ['isolation', 'hostile'], population: { low: 6.0 }, guideline: { text: 'AASM/SRS consensus: adults need 7 h or more; the panel called 6 h or fewer inadequate. ISS crews averaged 6.09 h.', sources: ['aasmSleep', 'aasmPress', 'sleepStudy'], kind: 'guideline' },
     howTo: ['On waking, note when you fell asleep and woke.', 'Subtract long awakenings.', 'Log the total hours.'],
     why: 'Sleep loss is pervasive in spaceflight and drives mood, alertness and immune changes.', quick: [5, 5.5, 6, 6.5, 7, 7.5], sources: ['sleepStudy', 'hrpRisks'] },
-  { id: 'mood', name: 'Mood', short: 'Mood', unit: '/5', decimals: 0, concern: 'low', systems: ['brain'], hazards: ['isolation', 'radiation', 'distance'], population: { low: 2 },
+  { id: 'mood', name: 'Mood', short: 'Mood', unit: '/5', decimals: 0, concern: 'low', systems: ['brain'], hazards: ['isolation', 'radiation', 'distance'], population: { low: 2 }, guideline: { text: 'The 1–5 check-in is a HALO design value. For a validated screen HALO offers the PHQ-2 (score ≥3 = positive, follow up with a professional).', sources: ['phq2'], kind: 'design' },
     howTo: ['Pause and notice how you feel right now.', 'Pick 1 (very low) to 5 (great).', 'Optionally add one line to your private journal.'],
     why: 'Behavioural health is a top risk on long missions; journaling is used by NASA behavioural scientists.', quick: [1, 2, 3, 4, 5], sources: ['hazIsolation', 'hrpRisks'] },
-  { id: 'exercise', name: 'Exercise', short: 'Exercise', unit: 'min', decimals: 0, concern: 'low', systems: ['msk', 'cardio'], hazards: ['gravity'], population: { low: 60 },
+  { id: 'exercise', name: 'Exercise', short: 'Exercise', unit: 'min', decimals: 0, concern: 'low', systems: ['msk', 'cardio'], hazards: ['gravity'], population: { low: 60 }, guideline: { text: 'ISS crews were prescribed about 2.5 h/day, 6 days a week. The 60-min floor is a HALO design value.', sources: ['exerciseNtrs'], kind: 'design' },
     howTo: ['Log resistance and aerobic minutes separately or combined.', 'Count only active time.', 'Log after each session.'],
     why: 'Exercise is the primary countermeasure for bone, muscle and cardiovascular deconditioning.', quick: [30, 60, 90, 120, 150, 180], sources: ['exerciseNtrs', 'boneBrief'] },
-  { id: 'pvt', name: 'Reaction time', short: 'Reaction', unit: 'ms', decimals: 0, concern: 'high', systems: ['brain', 'sleep'], hazards: ['isolation', 'radiation'], population: { high: 400 },
+  { id: 'pvt', name: 'Reaction time', short: 'Reaction', unit: 'ms', decimals: 0, concern: 'high', systems: ['brain', 'sleep'], hazards: ['isolation', 'radiation'], population: { high: 400 }, guideline: { text: 'NASA’s 3-min Reaction Self-Test (PVT-B) counts lapses ≥355 ms. No mean-RT cut-off exists; the 400 ms line is a HALO design value.', sources: ['pvtB', 'spinoffRst'], kind: 'design' },
     howTo: ['Open the Reaction test in a quiet moment.', 'Tap as soon as the counter appears.', 'Keep going for the full test; HALO logs your mean reaction time.'],
-    why: 'Objective fatigue and alertness measure; NASA uses a short self-test of vigilance and attention.', quick: [240, 260, 280, 300, 330, 360], sources: ['bodyInSpace'] },
+    why: 'Objective fatigue and alertness measure. NASA flies a 3-minute Psychomotor Vigilance Test as the Reaction Self-Test; 24 ISS astronauts used it on 6-month missions.', quick: [240, 260, 280, 300, 330, 360], sources: ['spinoffRst', 'pvtRst'] },
 ]
 
 export const IND: Record<IndicatorId, Indicator> = Object.fromEntries(INDICATORS.map((i) => [i.id, i])) as Record<IndicatorId, Indicator>

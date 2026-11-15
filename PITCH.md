@@ -103,3 +103,16 @@ Remaining weaknesses to acknowledge if asked: no real crew data; Mars delay curv
 - [ ] References field: paste REFERENCES.md
 - [ ] Tick both checkboxes (terms; original work + references)
 - [ ] Click **Submit** and confirm the success banner. Submit early, before 10:30 pm.
+
+## What changed in v3 (say this if asked “is it clinical?”)
+
+- **Honest answer:** HALO is decision support, not a medical device. What is clinical-grade is the *reference layer*: every absolute threshold comes from a published guideline and cites it in the app.
+- Blood pressure: AHA categories; crisis above 180 and/or 120 mmHg. Low BP: below 90/60 (NHLBI).
+- Fever: measured 38.0 °C or more (CDC). Resting heart rate: 60–100 bpm.
+- Glucose: ADA level 1 low 54–69, level 2 low under 54; time-in-range 70–180 mg/dL.
+- Sleep: 7 h or more (AASM/SRS); ISS crews averaged 6.09 h.
+- Alertness: NASA's 3-minute Reaction Self-Test protocol (PVT-B), lapse = 355 ms or more.
+- Mood: PHQ-2, positive at 3 or more (a screen, not a diagnosis).
+- Sensor trust: Bland–Altman agreement against the ANSI ±5 bpm / ±10% band.
+- New: voice commands, Mars-sol planner (24 h 39 min 35 s), interactive 3D transfer view, installable offline app.
+- Tests: 46 unit tests, 118 end-to-end checks, 0 accessibility violations in 29 states.

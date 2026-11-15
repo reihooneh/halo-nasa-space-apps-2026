@@ -6,7 +6,7 @@ import { CREW, dayOfIdx, fmtDate, IND_IDS, TOTAL, PRE_DAYS, SPE_DAY, WATCH_DAY }
 import { DRIFT_PARAMS } from '../engine/drift'
 import { Panel, Prov, download, Illustrative } from '../ui/kit'
 
-const ORDER: Org[] = ['NASA', 'NASA CCMC', 'CSA', 'NASA-funded study', 'Peer-reviewed', 'Other', 'Space Apps']
+const ORDER: Org[] = ['NASA', 'NASA CCMC', 'CSA', 'NASA-funded study', 'Clinical guideline', 'Peer-reviewed', 'Other', 'Space Apps']
 
 export function SourcesView() {
   const h = useHalo()
@@ -14,14 +14,14 @@ export function SourcesView() {
     <div className="space-y-5">
       <Panel title="Science & Sources" kicker="Every number in HALO comes from here" tour="sources">
         <div className="rounded-xl border border-warn/30 bg-warn/[0.06] p-3 text-sm text-ink-soft">
-          <b className="text-warn">Disclaimer.</b> HALO is a NASA Space Apps prototype. Crew data is <b>simulated</b> and the crew is fictional. HALO is <b>not a medical device</b> and gives no diagnosis or drug dosing. Drift and triage thresholds are <b>illustrative, not medical advice</b>. Space-weather events are real NASA CCMC DONKI records placed on a scenario calendar.
+          <b className="text-warn">Disclaimer.</b> HALO is a NASA Space Apps prototype. Crew data is <b>simulated</b> and the crew is fictional. HALO is <b>not a medical device</b> and gives no diagnosis or drug dosing. Absolute thresholds come from <b>published clinical guidelines</b> (AHA, NHLBI, CDC, ADA, AASM); drift parameters and triage steps are <b>illustrative, not medical advice</b>. Space-weather events are real NASA CCMC DONKI records placed on a scenario calendar.
         </div>
       </Panel>
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="space-y-5">
         <Panel title="The five hazards (RIDGE)" kicker="NASA Human Research Program">
-          <ul className="space-y-3">
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             {HAZARDS.map((hz) => (
-              <li key={hz.id} className="rounded-xl border border-white/[0.07] p-3">
+              <li key={hz.id} className="tilt flex flex-col rounded-xl border border-white/[0.07] p-3" style={{ background: `linear-gradient(180deg, ${hz.color}12, transparent 60%)` }}>
                 <div className="flex items-center gap-2"><span className="num flex h-6 w-6 items-center justify-center rounded-md text-sm font-bold" style={{ background: hz.color + '22', color: hz.color }}>{hz.letter}</span><span className="font-medium">{hz.name}</span></div>
                 <p className="mt-1 text-sm text-ink-soft">{hz.summary}</p>
                 <div className="mt-1 text-xs text-ink-mute">Countermeasures: {hz.countermeasures.join(' · ')}</div>
@@ -30,9 +30,9 @@ export function SourcesView() {
             ))}
           </ul>
         </Panel>
-        <div className="space-y-5">
+        <div>
           <Panel title="Facts and numbers used" kicker="Value · status · source">
-            <ul className="space-y-2">
+            <ul className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
               {Object.values(FACTS).map((f) => (
                 <li key={f.id} className="rounded-xl border border-white/[0.06] px-3 py-2 text-sm">
                   <div className="flex flex-wrap items-baseline justify-between gap-2"><span className="text-ink-soft">{f.label}</span><span className="num text-ink">{f.value}</span></div>
@@ -44,20 +44,33 @@ export function SourcesView() {
           </Panel>
         </div>
       </div>
-      <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
         <Panel title="All sources" kicker="For the References field">
+          <div className="gap-6 md:columns-2">
           {ORDER.map((org) => {
             const list = Object.values(SOURCES).filter((s) => s.org === org)
             if (!list.length) return null
             return (
-              <div key={org} className="mb-3">
+              <div key={org} className="mb-3 break-inside-avoid">
                 <div className="label mb-1">{org === 'CSA' ? 'CSA (Space Agency Partner)' : org}</div>
                 <ul className="space-y-1">{list.map((s) => <li key={s.id}><a className="focus-ring inline-flex items-start gap-1.5 text-sm text-ink-soft hover:text-teal" href={s.url} target="_blank" rel="noreferrer"><ExternalLink size={12} className="mt-1 shrink-0" aria-hidden /><span>{s.title}{s.official && <span className="ml-1.5 chip border-teal/30 px-1.5 py-0 text-[10px] text-teal">Official challenge resource</span>}</span></a></li>)}</ul>
               </div>
             )
           })}
+          </div>
         </Panel>
-        <DatasetExport h={h} />
+        <div className="space-y-5 xl:sticky xl:top-48 xl:self-start">
+          <DatasetExport h={h} />
+          <Panel title="Credits & licences" kicker="Open assets only">
+            <ul className="space-y-1.5 text-sm text-ink-soft">
+              <li><b className="text-ink">Powered by NASA data</b>: HRP, NASA-STD-3001, CCMC DONKI, Curiosity RAD, Reaction Self-Test.</li>
+              <li>No NASA or agency logos are used; agency names appear only as source credits.</li>
+              <li>Fonts: Inter and JetBrains Mono (SIL Open Font License).</li>
+              <li>Icons: Lucide (ISC). 3D: three.js (MIT). Charts: Recharts (MIT).</li>
+              <li>All crew data is synthetic and generated in the browser from a fixed seed.</li>
+            </ul>
+          </Panel>
+        </div>
       </div>
     </div>
   )

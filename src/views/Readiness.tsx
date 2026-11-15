@@ -1,3 +1,4 @@
+import { bpCategory } from '../data/clinical'
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle2, CircleAlert, Download, PlaneLanding, Rocket, XCircle } from 'lucide-react'
@@ -59,6 +60,7 @@ export function ReadinessView() {
             </motion.div>
             <div className="mt-4 flex flex-wrap gap-2"><ReadAloud label="Read the poll" lines={[`EVA poll for day ${h.day}. Decision: ${m.label}.`, ...poll.map((p) => `${p.name}: ${GO_META[p.go].label}.`)]} /></div>
             <p className="mt-3 text-[11px] text-ink-mute">Each system reports GO / GO with conditions / NO-GO from HALO’s drift states, the latest vision and balance checks, and space weather. A flight surgeon and the commander make the final call.</p>
+            <PreEva />
           </Panel>
           <Panel title="Poll by system" kicker="Like a mission-control go/no-go poll">
             <ol className="space-y-2" aria-label="EVA go/no-go poll">
@@ -163,5 +165,36 @@ function Gauge({ value }: { value: number }) {
       <motion.path d="M18,80 A52,52 0 0 1 122,80" fill="none" stroke={col} strokeWidth="12" strokeLinecap="round" strokeDasharray={C} animate={{ strokeDashoffset: C * (1 - value / 100) }} transition={{ duration: 0.6 }} />
       <text x="70" y="74" textAnchor="middle" className="num" fontSize="26" fontWeight="600" fill="#E6EDF7">{value}</text>
     </svg>
+  )
+}
+
+/** Pre-EVA checklist built from today's data with guideline categories (AHA BP, CDC fever, PVT-B, space weather). */
+function PreEva() {
+  const h = useHalo()
+  const pvt = h.allTests.filter((t) => t.kind === 'pvt' && t.day === h.day).at(-1)
+  const bal = h.allTests.filter((t) => t.kind === 'balance' && t.day <= h.day).at(-1)
+  const bp = bpCategory(h.latest.sbp, h.latest.dbp)
+  const items: { k: string; ok: boolean | null; v: string }[] = [
+    { k: 'Alertness (reaction time vs baseline)', ok: h.states.pvt !== 'drift', v: pvt ? pvt.detail.split(',').slice(0, 2).join(',') : `${h.latest.pvt ?? '—'} ms · run PVT-B in Log & Measure` },
+    { k: 'Balance check (latest)', ok: bal ? bal.value >= 0 : null, v: bal ? bal.detail.split(' (')[0] : 'No check yet' },
+    { k: 'Blood pressure category (AHA)', ok: bp ? bp.tone === 'ok' || bp.tone === 'info' : null, v: bp ? `${h.latest.sbp}/${h.latest.dbp} · ${bp.label}` : '—' },
+    { k: 'No fever (CDC ≥38.0 °C)', ok: h.latest.temp != null ? h.latest.temp < 38 : null, v: h.latest.temp != null ? `${h.latest.temp} °C` : '—' },
+    { k: 'Sleep last night (AASM ≥7 h)', ok: h.latest.sleep != null ? h.latest.sleep >= 7 : null, v: h.latest.sleep != null ? `${h.latest.sleep} h` : '—' },
+    { k: 'Space weather quiet', ok: !(h.speActive || h.watchActive), v: h.speActive ? 'Solar particle event active' : h.watchActive ? 'Watch: large flare/CME on record' : 'No watch' },
+  ]
+  return (
+    <div className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3" data-pre-eva>
+      <div className="flex items-center justify-between"><div className="text-sm font-medium">Before the hatch opens</div><span className="num text-xs text-ink-mute">{items.filter((i) => i.ok).length}/{items.length} clear</span></div>
+      <ul className="mt-2 space-y-1">
+        {items.map((i) => (
+          <li key={i.k} className="flex items-center gap-2 text-[12.5px]">
+            <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] ${i.ok == null ? 'bg-white/10 text-ink-mute' : i.ok ? 'bg-ok/20 text-ok' : 'bg-warn/20 text-warn'}`} aria-hidden>{i.ok == null ? '–' : i.ok ? '✓' : '!'}</span>
+            <span className="text-ink-soft">{i.k}</span><span className="ml-auto truncate pl-2 text-right text-ink-mute">{i.v}</span>
+            <span className="sr-only">{i.ok == null ? 'not available' : i.ok ? 'clear' : 'needs attention'}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2"><Prov ids={['ahaBp', 'cdcFever', 'aasmSleep', 'pvtB']} /></div>
+    </div>
   )
 }

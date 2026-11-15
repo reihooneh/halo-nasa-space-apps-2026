@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { AlertTriangle, CheckCircle2, Minus, PackageCheck, Plus, Send } from 'lucide-react'
 import { IND } from '../data/domain'
 import { useHalo } from '../state/store'
-import { TRIAGE_THRESHOLDS } from '../engine/triage'
-import { Illustrative, LevelPill, Panel, ReadAloud, Simulated } from '../ui/kit'
+import { TRIAGE_THRESHOLDS as T, TRIAGE_SOURCES } from '../engine/triage'
+import { Illustrative, LevelPill, Panel, Prov, ReadAloud, Simulated } from '../ui/kit'
 
 export function TriageView() {
   const h = useHalo()
@@ -12,7 +12,7 @@ export function TriageView() {
   return (
     <div className="space-y-5">
       <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
-        <Panel title="Autonomous Triage" kicker="Deterministic · offline · explainable" tour="triage" right={<><Simulated /><Illustrative text="Rules illustrative" /></>}>
+        <Panel title="Autonomous Triage" kicker="Deterministic · offline · explainable" tour="triage" right={<><Simulated /><Illustrative text="Protocol steps illustrative" /></>}>
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
             <div><div className="label">Decision</div><div className="mt-1"><LevelPill level={t.level} big /></div></div>
             <div className="min-w-0 flex-1 text-sm text-ink-soft">{t.groundNote}</div>
@@ -31,7 +31,7 @@ export function TriageView() {
               <li key={r.id} className="rounded-2xl border border-white/[0.08] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2"><span className="num rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] text-ink-mute">{r.id}</span><span className="font-medium">{r.title}</span></div>
-                  <LevelPill level={r.level} />
+                  <div className="flex items-center gap-2">{TRIAGE_SOURCES[r.id] && <Prov ids={TRIAGE_SOURCES[r.id]} />}<LevelPill level={r.level} /></div>
                 </div>
                 <div className="mt-1.5 text-sm text-ink-soft"><b className="text-ink">Why:</b> {r.why}</div>
                 {r.indicators.length > 0 && <div className="mt-1 text-xs text-ink-mute">Inputs: {r.indicators.map((i) => `${IND[i].short} ${h.latest[i] ?? '—'} ${IND[i].unit} (${h.states[i]})`).join(' · ')}</div>}
@@ -61,16 +61,16 @@ export function TriageView() {
             <ol className="space-y-1.5 text-xs">
               {[
                 ['R1', 'Solar particle event active → Urgent (shelter). Watch → Monitor.'],
-                ['R2', `Temp ≥ ${TRIAGE_THRESHOLDS.feverC} °C + HR raised → Urgent; temp alone → Monitor.`],
-                ['R3', `BP ≥ ${TRIAGE_THRESHOLDS.sbpHigh}/${TRIAGE_THRESHOLDS.dbpHigh} or ≤ ${TRIAGE_THRESHOLDS.sbpLow} with HR ≥ ${TRIAGE_THRESHOLDS.hrHighWithLowBp} → Urgent; BP drift → Monitor.`],
-                ['R4', `Glucose ≤ ${TRIAGE_THRESHOLDS.glucoseLow} or ≥ ${TRIAGE_THRESHOLDS.glucoseHigh} mg/dL → Urgent; drift → Monitor.`],
+                ['R2', `Temp ≥ ${T.feverC.toFixed(1)} °C (CDC fever) + HR > ${T.feverHr} or above baseline → Urgent; fever alone → Monitor.`],
+                ['R3', `BP > ${T.sbpCrisis}/${T.dbpCrisis} (AHA crisis) → Urgent · ≥ ${T.sbpStage2}/${T.dbpStage2} (AHA stage 2) → Monitor · SBP < ${T.sbpLow} (NHLBI) with HR > ${T.hrHighWithLowBp} → Urgent · drift → Monitor.`],
+                ['R4', `Glucose < ${T.glucoseL2Low} or > ${T.glucoseL2High} mg/dL (ADA level 2) → Urgent · < ${T.glucoseL1Low} or > ${T.glucoseL1High} → Monitor · drift → Monitor.`],
                 ['R5', 'Mood 1/5 → Urgent (talk to a human); mood drift → Monitor.'],
                 ['R6–R7', 'Sleep or reaction-time drift → Monitor (defer critical tasks).'],
                 ['R8', 'Exercise drift → Self-manage (Gravity Debt plan).'],
-                ['Ground', `Urgent → contact ground. If one-way delay ≥ ${TRIAGE_THRESHOLDS.autonomousDelaySec / 60} min, HALO runs the protocol first.`],
+                ['Ground', `Urgent → contact ground. If one-way delay ≥ ${T.autonomousDelaySec / 60} min, HALO runs the protocol first.`],
               ].map(([k, v]) => <li key={k} className="flex gap-2 rounded-lg border border-white/[0.05] px-2 py-1.5"><span className="num w-12 shrink-0 text-teal">{k}</span><span className="text-ink-soft">{v}</span></li>)}
             </ol>
-            <div className="mt-2"><Illustrative /></div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink-mute">Thresholds: <Prov ids={['ahaBp', 'nhlbiLowBp', 'cdcFever', 'adaGlucose', 'mayoHr']} /> · steps are demo protocols, not flight-surgeon approved.</div>
           </Panel>
           <Medkit />
         </div>
