@@ -26,7 +26,7 @@ npm run a11y         # axe-core WCAG 2.1 A/AA audit of every view and mode
 
 `dist-single/index.html` (shipped as `halo.html`) runs by double-click, fully offline, with fonts bundled.
 
-**Deploy:** every push to `main` builds and publishes to GitHub Pages via `.github/workflows/pages.yml`. `vite.config.ts` uses `base: './'`, so any sub-path works. The production build is an installable PWA (manifest + service worker).
+**Deploy:** every push to `main` builds and publishes to GitHub Pages to the `gh-pages` branch via `.github/workflows/pages.yml` (Settings → Pages → Branch: `gh-pages`). `vite.config.ts` uses `base: './'`, so any sub-path works. The production build is an installable PWA (manifest + service worker).
 
 ## The 60-second demo
 
