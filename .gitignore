@@ -2,3 +2,4 @@ node_modules
 dist
 dist-single
 e2e/shots
+deck-shots/

@@ -2,7 +2,7 @@
 
 <p align="center"><img src="docs/orbital-vitals-logo.png" alt="Orbital Vitals logo" width="420"></p>
 
-**Team:** Orbital Vitals · NASA Space Apps Challenge 2026, Sydney · Challenge: *Create Health Monitoring Software for Astronauts on Space Missions*
+**Team:** Orbital Vitals (Reihaneh Rahmati) · NASA Space Apps Challenge 2026, Sydney · Challenge: *Create Health Monitoring Software for Astronauts on Space Missions*
 
 
 **NASA Space Apps Challenge 2026 · Challenge: Create Health Monitoring Software for Astronauts on Space Missions · Sydney Local Event**

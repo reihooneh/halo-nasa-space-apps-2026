@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { chromium } from '@playwright/test'
-const OUT = '/home/claude/deck3/'; mkdirSync(OUT, { recursive: true })
+const OUT = new URL('../deck-shots/', import.meta.url).pathname; mkdirSync(OUT, { recursive: true })
 const server = spawn('npx', ['vite', 'preview', '--port', '4188', '--strictPort'], { stdio: 'pipe' })
 await new Promise((r) => setTimeout(r, 2500))
 const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })
